@@ -397,7 +397,7 @@ def get_template_path(parser, xlsx_template):
             parser.error(f'The default template: {DEFAULT_TEMPLATE} doesn\'t exist')
     elif not filepath_exists(xlsx_template):
         parser.error(f'The template: {xlsx_template} doesn\'t exist')
-    
+
     return xlsx_template
 
 
@@ -431,7 +431,7 @@ def main():
         f.close()
 
     args.xlsx_template = get_template_path(parser, args.xlsx_template)
-    
+
     debug('Source file:', args.indicators_csv)
     debug('Template:', args.xlsx_template)
     debug('Output file:', OUT_FILENAME)
