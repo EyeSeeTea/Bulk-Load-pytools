@@ -170,6 +170,7 @@ def get_country_and_year(document):
 def extract_longtext_tables(document):
     """
     Extracts tables from the source DOCX file and returns them as a list of dictionaries.
+    Ignores fields starting with "Internal".
 
     :param document: The document loaded from the source DOCX file.
     :type document: Document
@@ -186,6 +187,8 @@ def extract_longtext_tables(document):
         table_data = {}
         for row in table.rows:
             key = row.cells[0].text.rstrip()
+            if key.startswith(INTERNAL):
+                continue
             value = row.cells[1].text.rstrip()
             if key and value:
                 table_data[key] = value
@@ -241,7 +244,8 @@ def main():
     if not filepath_exists(args.docx_filename):
         parser.error(f'The source file: {args.docx_filename} doesn\'t exist')
 
-    global OUT_FILENAME, DEFAULT_TEMPLATE, DEBUG, LOG_FILE, COUNTRY, YEAR
+    global OUT_FILENAME, DEFAULT_TEMPLATE, DEBUG, LOG_FILE, COUNTRY, YEAR, INTERNAL
+    INTERNAL = 'Internal'
     DEFAULT_TEMPLATE = 'Qualitative_Data_UHCPW_Template.xlsx'
     DEBUG = args.debug
 
