@@ -14,7 +14,7 @@ Metadata_ids = namedtuple("Metadata_ids", "indicators, countries, combos")
 
 COUNTRY_DICT = {
     'BIH': 'Bosnia and Herzegovina',
-    'CZE': 'Czech Republic',
+    'CZH': 'Czech Republic',
     'DEU': 'Federal Republic of Germany',
     'FRA': 'French Republic',
     'GEO': 'Georgia',
@@ -260,7 +260,7 @@ def extract_values_from_csv(filename):
 
         return values
     except Exception as e:
-        print(e)
+        traceback.print_exc()
         sys.exit(1)
 
 
