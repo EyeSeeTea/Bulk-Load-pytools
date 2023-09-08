@@ -5,6 +5,7 @@ import json
 import argparse
 import traceback
 import openpyxl
+import pandas as pd
 from openpyxl.cell import MergedCell
 from collections import namedtuple
 
@@ -216,6 +217,33 @@ def check_for_empty_csv_fields(**vars):
             print(f'Empty {name} variable in CSV file in row:\n{vars["row"]}')
 
 
+def currency_converter(amount: str, country: str, year: str, figure: str):
+    currency_figures = ["F5", "F9", "F10a", "F10b", "F10c", "F10d", "F10e", "F10f", "F26"]
+
+    debug(f'currency_converter amount: {amount} | country_code: {country} | year: {year} | figure: {figure}')
+
+    if figure not in currency_figures:
+        debug('currency_converter figure not in list')
+        return amount
+
+    coefficient = CURRENCY_TABLE[
+        (CURRENCY_TABLE['code'] == country)
+    ][year].values[0]
+
+    debug('currency_converter coefficient:', coefficient)
+
+    adjusting_for_inflation = round(float(amount) / coefficient, 2)
+
+    return str(adjusting_for_inflation)
+
+
+def get_csv_indicator_value(value: str, real_value: str):
+    if REAL_VALUE:
+        return real_value if real_value != "NA" else value
+    else:
+        return value
+
+
 def extract_values_from_csv(filename):
     values = {}
 
@@ -228,7 +256,11 @@ def extract_values_from_csv(filename):
                 year = row['year']
                 quintile = row['quintile']
                 service = row['service']
-                value = row['value'] if not REAL_VALUE else row['real_value']
+                if CURRENCY:
+                    figure = row['figure_id']
+                    value = currency_converter(row['value'], country, year, figure)
+                else:
+                    value = get_csv_indicator_value(row['value'], row['real_value'])
 
                 check_for_empty_csv_fields(
                     row=row,
@@ -410,8 +442,11 @@ def main():
     parser.add_argument('indicators_csv', type=str, help='Source CSV file')
     parser.add_argument('-x', '--xlsx_template', type=str,
                         help='Bulk Load Quantitative XLSX template file path, if empty tries to open "Quantitative_Data_UHCPW_Template.xlsx"')
-    parser.add_argument('-r', '--real_value', action='store_true',
-                        help='Use real_value insted of value from the CSV source file')
+    adjusted_values_args = parser.add_mutually_exclusive_group()
+    adjusted_values_args.add_argument('-r', '--real_value', action='store_true',
+                        help='Use real_value (if not NA) insted of value from the CSV source file, cant be used with -c/--currency')
+    adjusted_values_args.add_argument('-c', '--currency', action='store_true',
+                        help='Apply currency adjustment to the applicable values, cant be used with -r/--real_value')
     parser.add_argument('-d', '--debug', action='store_true',
                         help='Display debug logs, its recommended to redirect the output into a file, e.g: ... > log.txt')
     args = parser.parse_args()
@@ -419,11 +454,12 @@ def main():
     if not filepath_exists(args.indicators_csv):
         parser.error(f'The source file: {args.indicators_csv} doesn\'t exist')
 
-    global OUT_FILENAME, DEFAULT_TEMPLATE, REAL_VALUE, DEBUG, LOG_FILE
+    global OUT_FILENAME, DEFAULT_TEMPLATE, REAL_VALUE, DEBUG, LOG_FILE, CURRENCY, CURRENCY_TABLE
     DEFAULT_TEMPLATE = 'Quantitative_Data_UHCPW_Template.xlsx'
     OUT_FILENAME = f'{args.indicators_csv.split(".csv")[0]}.xlsx'
     REAL_VALUE = args.real_value
     DEBUG = args.debug
+    CURRENCY = args.currency
 
     if DEBUG:
         LOG_FILE = "log.json"
@@ -435,6 +471,13 @@ def main():
     debug('Source file:', args.indicators_csv)
     debug('Template:', args.xlsx_template)
     debug('Output file:', OUT_FILENAME)
+
+    if CURRENCY:
+        CURRENCY_TABLE = pd.read_csv(
+            "https://docs.google.com/spreadsheets/d/1lEHQ9i-LO7gl0RWaJgYcfOJHjPefVXJbhgJ0Gn3iUPQ/export?format=csv&gid=56805701",
+            decimal=","
+        )
+        debug('Currency table:', CURRENCY_TABLE)
 
     try:
         wb = openpyxl.load_workbook(args.xlsx_template)
