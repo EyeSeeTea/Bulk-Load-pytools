@@ -377,7 +377,7 @@ def write_indicator(col_indicator, col_combo, last_cell, matched_values):
                     for combo_id, value in indicator_combos.items():
                         ids = combo_id.split(
                             '|') if '|' in combo_id else combo_id
-                        if col_combo in ids or (col_combo == 'HllvX50cXC0' and combo_id == 'gEWtgad4feW'):
+                        if col_combo in ids or (col_combo == 'Xr12mI7VPn3' and combo_id == 'gEWtgad4feW'):
                             new_cell = last_cell.offset(row=1, column=0)
                             new_cell.value = value
 
@@ -444,9 +444,9 @@ def main():
                         help='Bulk Load Quantitative XLSX template file path, if empty tries to open "Quantitative_Data_UHCPW_Template.xlsx"')
     adjusted_values_args = parser.add_mutually_exclusive_group()
     adjusted_values_args.add_argument('-r', '--real_value', action='store_true',
-                        help='Use real_value (if not NA) insted of value from the CSV source file, cant be used with -c/--currency')
+                                      help='Use real_value (if not NA) insted of value from the CSV source file, cant be used with -c/--currency')
     adjusted_values_args.add_argument('-c', '--currency', action='store_true',
-                        help='Apply currency adjustment to the applicable values, cant be used with -r/--real_value')
+                                      help='Apply currency adjustment to the applicable values, cant be used with -r/--real_value')
     parser.add_argument('-d', '--debug', action='store_true',
                         help='Display debug logs, its recommended to redirect the output into a file, e.g: ... > log.txt')
     args = parser.parse_args()

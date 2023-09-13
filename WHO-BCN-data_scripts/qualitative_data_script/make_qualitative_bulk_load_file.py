@@ -112,7 +112,7 @@ def write_data(col_indicator, col_combo, last_cell, matched_values):
                     for combo_id, value in indicator_combos.items():
                         ids = combo_id.split(
                             '|') if '|' in combo_id else combo_id
-                        if col_combo in ids or (col_combo == 'HllvX50cXC0' and combo_id == 'gEWtgad4feW'):
+                        if col_combo in ids or (col_combo == 'Xr12mI7VPn3' and combo_id == 'gEWtgad4feW'):
                             new_cell = last_cell.offset(row=1, column=0)
                             new_cell.value = value
 
