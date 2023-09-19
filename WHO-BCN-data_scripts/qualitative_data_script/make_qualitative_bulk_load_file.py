@@ -206,6 +206,84 @@ def extract_longtext_tables(document):
     return tables_data_list
 
 
+def table_is_target(table, test_header: list):
+    debug("table_is_target header len: ", len(table.columns), len(test_header))
+    if len(table.columns) != len(test_header):
+        return False
+
+    table_header = [cell.text.strip() for cell in table.rows[0].cells]
+    debug("table_is_target headers: ", table_header, test_header)
+    if table_header == test_header:
+        return True
+
+
+def get_charges_in_coverage_table_data(document, header_dict, target_headers):
+    table_data = {}
+
+    for table in document.tables:
+        header_keys = list(header_dict.keys())
+        header_data_elements = list(header_dict.values())
+
+        if table_is_target(table, header_keys):
+            for row_id, row in enumerate(table.rows):
+                # NOTE: Limited to 5 items as its the limit of the data entry form
+                if row_id == 0 or row_id > 5:
+                    continue
+                for cell_id, cell in enumerate(row.cells):
+                    if cell_id in target_headers:
+                        data_element = f'{header_data_elements[cell_id]} ({row_id})'
+                        table_data[data_element] = cell.text.strip()
+            return table_data
+
+
+def extract_charges_in_coverage_upto19_table(document):
+    changes_in_coverage_2019_header = {
+        "Year": "",
+        "Month": "",
+        "Coverage policy area": "Policy of change in coverage policy pre2019",
+        "Policy change": "Area of change in coverage policy pre2019",
+        "Health services targeted": "Health services targeted in change in coverage policy pre2019",
+        "People targeted": "People targeted in change in coverage policy pre2019",
+        "Coverage policy area (cat)": "",
+        "Health services targeted (cat)": "",
+        "People targeted (cat)": ""
+    }
+
+    target_headers = [2, 3, 4, 5]
+    table_data = get_charges_in_coverage_table_data(document, changes_in_coverage_2019_header, target_headers)
+
+    if table_data:
+        return table_data
+    else:
+        error('Cant find "Changes in coverage policy up to and including 2019" table.')
+        return None
+
+
+def extract_charges_in_coverage_since20_table(document):
+    changes_in_coverage_2020_header = {
+        "Year": "",
+        "Month": "",
+        "Coverage policy area": "Policy of change in coverage policy",
+        "Policy change": "Area of change in coverage policy",
+        "Health services targeted": "Health services targeted in change in coverage policy",
+        "People targeted": "People targeted in change in coverage policy",
+        "Was this a response to the COVID-19 pandemic?": "Was this a response to the COVID-19 pandemic?",
+        "Coverage policy area (cat)": "",
+        "Health services targeted (cat)": "",
+        "People targeted (cat)": "",
+        "Was this a response to the COVID-19 pandemic? (cat)": ""
+    }
+
+    target_headers = [2, 3, 4, 5, 6]
+    table_data = get_charges_in_coverage_table_data(document, changes_in_coverage_2020_header, target_headers)
+
+    if table_data:
+        return table_data
+    else:
+        error('Cant find "Changes in coverage policy since 2020" table.')
+        return None
+
+
 def debug(*msg):
     if DEBUG:
         with open(LOG_FILE, "a") as log_file:
@@ -282,6 +360,12 @@ def main():
 
     longtext_tables_data = extract_longtext_tables(document)
     debug('longtext_tables_data:\n', dump_json_var(longtext_tables_data))
+
+    charges_in_coverage_upto19_data = extract_charges_in_coverage_upto19_table(document)
+    debug('charges_in_coverage_upto19_data:\n', dump_json_var(charges_in_coverage_upto19_data))
+
+    charges_in_coverage_since20_data = extract_charges_in_coverage_since20_table(document)
+    debug('charges_in_coverage_since20_data:\n', dump_json_var(charges_in_coverage_since20_data))
 
     try:
         wb = openpyxl.load_workbook(args.xlsx_template)
