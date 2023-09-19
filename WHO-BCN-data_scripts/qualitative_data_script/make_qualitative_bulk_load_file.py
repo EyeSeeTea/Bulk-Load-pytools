@@ -156,15 +156,20 @@ def get_country_and_year(document):
     :rtype: tuple (str, str)
     """
 
-    first_paragraph = document.paragraphs[0]
-    first_line = first_paragraph.text
+    try:
+        first_paragraph = document.paragraphs[0]
+        first_line = first_paragraph.text
 
-    country, year = first_line.replace(")", "").split(" (")
+        country, year = first_line.replace(")", "").split(" (")
 
-    if not year.isnumeric() or len(year) != 4:
-        raise ValueError(f'Invalid year format for: {year}')
+        if not year.isnumeric() or len(year) != 4:
+            raise ValueError(f'Invalid year format for: {year}')
 
-    return country, year
+        return country, year
+    except Exception as e:
+        print('First line of the doc should be: Country (year)', file=sys.stderr)
+        traceback.print_exc()
+        sys.exit(1)
 
 
 def extract_longtext_tables(document):
