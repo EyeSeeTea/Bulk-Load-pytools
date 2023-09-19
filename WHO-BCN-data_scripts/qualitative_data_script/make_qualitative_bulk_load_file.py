@@ -236,6 +236,46 @@ def get_charges_in_coverage_table_data(document, header_dict, target_headers):
             return table_data
 
 
+def extract_user_charges_by_type_table(document):
+    header_list = [
+        "Type of health care",
+        "User charges apply",
+        "Type of user charge",
+        "Reduced user charges",
+        "Exemptions from user charges",
+        "Cap on user charges",
+    ]
+
+    type_of_heath_care_dict = {
+        "Outpatient primary care visits (text)": "(Primary Care)",
+        "Outpatient specialist visits (text)": "(Specialist Visits)",
+        "Outpatient emergency visits (text)": "(Emergency Visits)",
+        "Outpatient prescribed medicines (text)": "(Outpatient Medicines)",
+        "Medical products (text)": "(Medical Products)",
+        "Diagnostic tests (cat)": "(Diagnostics Tests)",
+        "Dental care visits (text)": "(Dental Visits)",
+        "Dental care treatment (text)": "(Dental Care Treatment)",
+        "Inpatient care (text)": "(Inpatient Care)",
+        "Inpatient medicines (text)": "(Inpatient Medicines)",
+    }
+
+    table_data = {}
+
+    for table in document.tables:
+
+        if table_is_target(table, header_list):
+            for row_id, row in enumerate(table.rows):
+                if row_id == 0:
+                    continue
+                for cell_id, cell in enumerate(row.cells):
+                    if cell_id == 0:
+                        type_of_heath_care = type_of_heath_care_dict[cell.text]
+                        continue
+                    data_element = f'{header_list[cell_id]} {type_of_heath_care}'
+                    table_data[data_element] = cell.text.strip()
+            return table_data
+
+
 def extract_charges_in_coverage_upto19_table(document):
     changes_in_coverage_2019_header = {
         "Year": "",
@@ -361,6 +401,9 @@ def main():
     longtext_tables_data = extract_longtext_tables(document)
     debug('longtext_tables_data:\n', dump_json_var(longtext_tables_data))
 
+    user_charges_by_type_data = extract_user_charges_by_type_table(document)
+    debug('user_charges_by_type_data:\n', dump_json_var(user_charges_by_type_data))
+
     charges_in_coverage_upto19_data = extract_charges_in_coverage_upto19_table(document)
     debug('charges_in_coverage_upto19_data:\n', dump_json_var(charges_in_coverage_upto19_data))
 
@@ -381,7 +424,11 @@ def main():
     debug(f'countries ids:\n len: {len(ids.countries)}\n values:\n', dump_json_var(ids.countries))
     debug(f'combos ids:\n len: {len(ids.combos)}\n values:\n', dump_json_var(ids.combos))
 
-    matched_values = make_matched_values(longtext_tables_data, ids)
+    tables_data = longtext_tables_data + [user_charges_by_type_data] + \
+        [charges_in_coverage_upto19_data] + [charges_in_coverage_since20_data]
+    debug('tables_data:\n', dump_json_var(tables_data))
+
+    matched_values = make_matched_values(tables_data, ids)
 
     debug(f'matched_values:\n', dump_json_var(matched_values))
 
