@@ -417,6 +417,10 @@ def debug(*msg):
             print(*msg, file=log_file)
 
 
+def dump_json_var(var):
+    return json.dumps(var, indent=2)
+
+
 def filepath_exists(filepath):
     return os.path.isfile(filepath)
 
@@ -487,17 +491,17 @@ def main():
         sys.exit(1)
 
     csv_values_dict = extract_values_from_csv(args.indicators_csv)
-    debug('csv_values_dict:\n', json.dumps(csv_values_dict))
+    debug(f'csv_values_dict:\n', dump_json_var(csv_values_dict))
 
     ids = get_metadata_ids(wb)
 
-    debug(f'indicators ids:\n len: {len(ids.indicators)}\n values:\n', json.dumps(ids.indicators))
-    debug(f'countries ids:\n len: {len(ids.countries)}\n values:\n', json.dumps(ids.countries))
-    debug(f'combos ids:\n len: {len(ids.combos)}\n values:\n', json.dumps(ids.combos))
+    debug(f'indicators ids:\n len: {len(ids.indicators)}\n values:\n', dump_json_var(ids.indicators))
+    debug(f'countries ids:\n len: {len(ids.countries)}\n values:\n', dump_json_var(ids.countries))
+    debug(f'combos ids:\n len: {len(ids.combos)}\n values:\n', dump_json_var(ids.combos))
 
     matched_values = make_matched_values(csv_values_dict, ids)
 
-    debug(f'matched_values:\n', json.dumps(matched_values))
+    debug(f'matched_values:\n', dump_json_var(matched_values))
 
     write_values(wb, matched_values)
 

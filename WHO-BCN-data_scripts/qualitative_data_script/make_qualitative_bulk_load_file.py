@@ -207,6 +207,14 @@ def debug(*msg):
             print(*msg, file=log_file)
 
 
+def error(*msg):
+    print(*msg, file=sys.stderr)
+
+
+def dump_json_var(var):
+    return json.dumps(var, indent=2)
+
+
 def filepath_exists(filepath):
     return os.path.isfile(filepath)
 
@@ -268,7 +276,7 @@ def main():
     debug('Country:', COUNTRY, 'Year:', YEAR)
 
     longtext_tables_data = extract_longtext_tables(document)
-    debug('longtext_tables_data:\n', json.dumps(longtext_tables_data))
+    debug('longtext_tables_data:\n', dump_json_var(longtext_tables_data))
 
     try:
         wb = openpyxl.load_workbook(args.xlsx_template)
@@ -279,14 +287,14 @@ def main():
 
     ids = get_metadata_ids(wb)
 
-    debug(f'sections ids:\n len: {len(ids.sections)}\n values:\n', json.dumps(ids.sections))
-    debug(f'data_elements ids:\n len: {len(ids.data_elements)}\n values:\n', json.dumps(ids.data_elements))
-    debug(f'countries ids:\n len: {len(ids.countries)}\n values:\n', json.dumps(ids.countries))
-    debug(f'combos ids:\n len: {len(ids.combos)}\n values:\n', json.dumps(ids.combos))
+    debug(f'sections ids:\n len: {len(ids.sections)}\n values:\n', dump_json_var(ids.sections))
+    debug(f'data_elements ids:\n len: {len(ids.data_elements)}\n values:\n', dump_json_var(ids.data_elements))
+    debug(f'countries ids:\n len: {len(ids.countries)}\n values:\n', dump_json_var(ids.countries))
+    debug(f'combos ids:\n len: {len(ids.combos)}\n values:\n', dump_json_var(ids.combos))
 
     matched_values = make_matched_values(longtext_tables_data, ids)
 
-    debug(f'matched_values:\n', json.dumps(matched_values))
+    debug(f'matched_values:\n', dump_json_var(matched_values))
 
     write_values(wb, matched_values)
 
