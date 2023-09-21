@@ -236,6 +236,9 @@ def get_charges_in_coverage_table_data(document, header_dict, target_headers):
             return table_data
 
 
+def cleanup_string(text: str):
+    return ' '.join(str(text).split())
+
 def extract_user_charges_by_type_table(document):
     header_list = [
         "Type of health care",
@@ -269,7 +272,7 @@ def extract_user_charges_by_type_table(document):
                     continue
                 for cell_id, cell in enumerate(row.cells):
                     if cell_id == 0:
-                        type_of_heath_care = type_of_heath_care_dict[cell.text]
+                        type_of_heath_care = type_of_heath_care_dict[cleanup_string(cell.text)]
                         continue
                     data_element = f'{header_list[cell_id]} {type_of_heath_care}'
                     table_data[data_element] = cell.text.strip()
