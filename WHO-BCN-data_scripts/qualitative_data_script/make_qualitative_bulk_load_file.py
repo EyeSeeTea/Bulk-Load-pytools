@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+import difflib
 import argparse
 import traceback
 from docx import Document
@@ -13,6 +14,7 @@ Metadata_ids = namedtuple("Metadata_ids", "sections, data_elements, countries, c
 
 
 def get_country_id(country, countries_ids):
+    country_key = None
     for key in countries_ids:
         if country in key:
             country_key = key
@@ -20,14 +22,16 @@ def get_country_id(country, countries_ids):
     if country_key:
         return countries_ids[country_key]
     else:
-        raise ValueError(f'Can\'t find id for: {country}')
+        error = f'Can\'t find orgUnit id for country: {country}'
+        raise ValueError(error)
 
 
 def get_data_element_id(de, data_elements_ids):
     if de in data_elements_ids:
         return data_elements_ids[de]
     else:
-        print(f'Can\'t find id for: {de}')
+        print(f'Can\'t find id for dataElement: {de}')
+        print(f'Closest candidates: {difflib.get_close_matches(de, data_elements_ids)}')
         return None
 
 
@@ -41,7 +45,7 @@ def get_metadata_ids(workbook):
     for row in sheet.iter_rows(min_row=2, min_col=1, max_col=5, values_only=True):
         identifier = row[0]
         type_col = row[1]
-        name = str(row[2]).strip()
+        name = cleanup_string(row[2])
         Option_set = row[4] if row[4] else False
 
         if type_col == 'sections':
