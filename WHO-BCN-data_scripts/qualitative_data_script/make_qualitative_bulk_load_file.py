@@ -403,12 +403,18 @@ def main():
 
     user_charges_by_type_data = extract_user_charges_by_type_table(document)
     debug('user_charges_by_type_data:\n', dump_json_var(user_charges_by_type_data))
+    if user_charges_by_type_data:
+        tables_data = longtext_tables_data + [user_charges_by_type_data]
 
     charges_in_coverage_upto19_data = extract_charges_in_coverage_upto19_table(document)
     debug('charges_in_coverage_upto19_data:\n', dump_json_var(charges_in_coverage_upto19_data))
+    if charges_in_coverage_upto19_data:
+        tables_data = longtext_tables_data + [charges_in_coverage_upto19_data]
 
     charges_in_coverage_since20_data = extract_charges_in_coverage_since20_table(document)
     debug('charges_in_coverage_since20_data:\n', dump_json_var(charges_in_coverage_since20_data))
+    if charges_in_coverage_since20_data:
+        tables_data = longtext_tables_data + [charges_in_coverage_since20_data]
 
     try:
         wb = openpyxl.load_workbook(args.xlsx_template)
@@ -424,8 +430,6 @@ def main():
     debug(f'countries ids:\n len: {len(ids.countries)}\n values:\n', dump_json_var(ids.countries))
     debug(f'combos ids:\n len: {len(ids.combos)}\n values:\n', dump_json_var(ids.combos))
 
-    tables_data = longtext_tables_data + [user_charges_by_type_data] + \
-        [charges_in_coverage_upto19_data] + [charges_in_coverage_since20_data]
     debug('tables_data:\n', dump_json_var(tables_data))
 
     matched_values = make_matched_values(tables_data, ids)
