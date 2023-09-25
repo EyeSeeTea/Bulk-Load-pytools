@@ -195,6 +195,10 @@ INDICATOR_IGNORING_QUINTILE = [
 ]
 
 
+COC_DEFAULT_ID = ""
+COC_TOTAL_ID = ""
+
+
 def get_new_name(indicator_name, service):
     if indicator_name in OLD_NAMES_DICT:
         debug(f'Found old name: {indicator_name}')
@@ -325,6 +329,11 @@ def get_metadata_ids(workbook):
         if type_col == 'categoryOptionCombos':
             combos_id_dict[identifier] = name
 
+            if name == "default":
+                COC_DEFAULT_ID = identifier
+            if name == "Total":
+                COC_TOTAL_ID = identifier
+
         if type_col == 'dataElements':
             indicators_id_dict[name] = identifier
 
@@ -385,19 +394,19 @@ def write_years(last_cell, matched_values):
 
 def write_indicator(col_indicator, col_combo, last_cell, matched_values):
     count = 0
-    
+
     for country_id, country_data in matched_values.items():
         for year, indicators in country_data.items():
             for indicator_id, indicator_combos in indicators.items():
                 if indicator_id == col_indicator:
                     for combo_id, value in indicator_combos.items():
                         ids = combo_id.split('|') if '|' in combo_id else combo_id
-                        if col_combo in ids or (col_combo == 'Xr12mI7VPn3' and combo_id == 'gEWtgad4feW'):
+                        if col_combo in ids or (col_combo == COC_DEFAULT_ID and combo_id == COC_TOTAL_ID):
                             new_cell = last_cell.offset(row=1, column=0)
                             new_cell.value = value
 
                             last_cell = new_cell
-                            
+
                             count += 1
 
     return count
@@ -424,10 +433,10 @@ def write_values(workbook, matched_values):
             last_cell = col[-1]
 
             count += write_indicator(col_indicator, col_combo,
-                            last_cell, matched_values)
+                                     last_cell, matched_values)
 
     workbook.save(OUT_FILENAME)
-    
+
     debug(f'excel count: {count}')
     return count
 
@@ -538,7 +547,7 @@ def main():
 
     excel_count = write_values(wb, matched_values)
     debug(f'write_values count: {excel_count}\n')
-    
+
     print(f'Processed {csv_count} entries from CSV file, written {excel_count} values to EXCEL')
 
 
