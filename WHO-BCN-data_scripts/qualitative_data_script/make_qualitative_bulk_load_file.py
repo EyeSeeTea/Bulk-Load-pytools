@@ -46,6 +46,12 @@ def get_metadata_ids(workbook):
         identifier = row[0]
         type_col = row[1]
         name = cleanup_string(row[2])
+        value_type = row[3]
+        
+        # NOTE: This is needed because the bulk load template adds ' (YYYY-MM-DD)' to DATE DEs
+        if value_type == "DATE":
+            name = name.removesuffix(" (YYYY-MM-DD)")
+
         Option_set = row[4] if row[4] else False
 
         if type_col == 'sections':
