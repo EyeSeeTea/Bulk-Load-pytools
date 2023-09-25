@@ -185,6 +185,15 @@ INDICATOR_IGNORING_SERVICE = [
     'Annual out-of-pocket payments for medical products per person by consumption quintile',
 ]
 
+INDICATOR_IGNORING_QUINTILE = [
+    'Breakdown of catastrophic health spending by type of health care (total)',
+    'Public spending on health as a share of current spending on health by type of care',
+    'Annual out-of-pocket payments on health care per person by type of health care (total)',
+    'Out-of-pocket payments as a share of current spending on health by type of care',
+    'Breakdown of out-of-pocket payments by type of health care (total)',
+    'Voluntary health insurance spending as a share of current spending on health by type of care',
+]
+
 
 def get_new_name(indicator_name, service):
     if indicator_name in OLD_NAMES_DICT:
@@ -202,6 +211,10 @@ def get_new_name(indicator_name, service):
 def make_combo_string(quintile: str, service: str):
     if service == 'NA':
         result = quintile
+        if quintile == "Total":
+            result = "default"
+    elif quintile == 'NA':
+        result = service
     else:
         if (quintile + ', ' + service) in COMBO_LIST:
             result = quintile + ', ' + service
@@ -284,6 +297,8 @@ def extract_values_from_csv(filename):
                     values[country_name][year][indicator_name] = {}
 
                 service = 'NA' if indicator_name in INDICATOR_IGNORING_SERVICE else service
+                quintile = 'NA' if indicator_name in INDICATOR_IGNORING_QUINTILE else quintile
+
                 cat_opt_combo = make_combo_string(quintile, service)
                 if value != 'NA' and value != None:
                     values[country_name][year][indicator_name][cat_opt_combo] = value
@@ -369,26 +384,29 @@ def write_years(last_cell, matched_values):
 
 
 def write_indicator(col_indicator, col_combo, last_cell, matched_values):
-
+    count = 0
+    
     for country_id, country_data in matched_values.items():
         for year, indicators in country_data.items():
             for indicator_id, indicator_combos in indicators.items():
                 if indicator_id == col_indicator:
                     for combo_id, value in indicator_combos.items():
-                        ids = combo_id.split(
-                            '|') if '|' in combo_id else combo_id
+                        ids = combo_id.split('|') if '|' in combo_id else combo_id
                         if col_combo in ids or (col_combo == 'Xr12mI7VPn3' and combo_id == 'gEWtgad4feW'):
                             new_cell = last_cell.offset(row=1, column=0)
                             new_cell.value = value
 
                             last_cell = new_cell
+                            
+                            count += 1
 
-    return last_cell
+    return count
 
 
 def write_values(workbook, matched_values):
     sheet = workbook['Data Entry']
     workbook.active = workbook['Data Entry']
+    count = 0
 
     for index, col in enumerate(sheet.iter_cols(min_row=4)):
         if index == 0:
@@ -405,10 +423,13 @@ def write_values(workbook, matched_values):
             col_combo = str(col[1].value).split('=_')[-1]
             last_cell = col[-1]
 
-            write_indicator(col_indicator, col_combo,
+            count += write_indicator(col_indicator, col_combo,
                             last_cell, matched_values)
 
     workbook.save(OUT_FILENAME)
+    
+    debug(f'excel count: {count}')
+    return count
 
 
 def debug(*msg):
@@ -419,6 +440,16 @@ def debug(*msg):
 
 def dump_json_var(var):
     return json.dumps(var, indent=2)
+
+
+def get_matched_values_len(matched_values: dict):
+    lenght = 0
+
+    for years in matched_values.values():
+        for indicators in years.values():
+            for combos in indicators.values():
+                lenght += len(combos)
+    return lenght
 
 
 def filepath_exists(filepath):
@@ -501,9 +532,14 @@ def main():
 
     matched_values = make_matched_values(csv_values_dict, ids)
 
+    csv_count = get_matched_values_len(matched_values)
+    debug(f'matched_values count: {csv_count}\n')
     debug(f'matched_values:\n', dump_json_var(matched_values))
 
-    write_values(wb, matched_values)
+    excel_count = write_values(wb, matched_values)
+    debug(f'write_values count: {excel_count}\n')
+    
+    print(f'Processed {csv_count} entries from CSV file, written {excel_count} values to EXCEL')
 
 
 if __name__ == '__main__':

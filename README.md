@@ -23,6 +23,10 @@ pip install -r requirements.txt
 This script processes CSV files from the "Data Extraction Tool" into "Bulk Load" XLSX files.
 The script needs a Bulk Load template. It can either be supplied with the `--xlsx_template` argument or by placing a template named "Quantitative_Data_UHCPW_Template.xlsx" in the same folder as the script.
 The output file will be named as the input CSV file, but with XLSX extension.
+
+The script will print the number of entries from the CSV file processed and the number of values written to EXCEL.
+The first number can indicate an issue with the CSV data, the second one with the metadata that generates the xlsx template.
+
 There's two options to get the adjusted value, either from the CSV file real_value column or calculating it from the value column. The data for the `--currency` is retrieved from: [google sheet](https://docs.google.com/spreadsheets/d/1lEHQ9i-LO7gl0RWaJgYcfOJHjPefVXJbhgJ0Gn3iUPQ#gid=56805701).
 
 ### Usage
