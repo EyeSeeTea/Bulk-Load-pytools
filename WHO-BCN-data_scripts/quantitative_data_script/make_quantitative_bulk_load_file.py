@@ -243,9 +243,29 @@ def currency_converter(amount: str, country: str, year: str, figure: str):
         debug('currency_converter figure not in list')
         return amount
 
-    coefficient = CURRENCY_TABLE[
-        (CURRENCY_TABLE['code'] == country)
-    ][year].values[0]
+    # NOTE: Temporal fixes until the CURRENCY_TABLE gets fixed
+    if country == "GRC":
+        country = "GRE"
+    elif country == "DNK":
+        country = "DEN"
+    elif country == "IRL":
+        country = "IRE"
+    elif country == "ROU":
+        country = "ROM"
+
+    try:
+        coefficient = CURRENCY_TABLE[
+            (CURRENCY_TABLE['code'] == country)
+        ][year].values[0]
+    except KeyError as e:
+        # If no coefficient available for year, get the closest year to present
+        last_year = next(reversed(CURRENCY_TABLE.keys()))
+        coefficient = CURRENCY_TABLE[
+            (CURRENCY_TABLE['code'] == country)
+        ][last_year].values[0]
+    except Exception as e:
+        traceback.print_exc()
+        sys.exit(1)
 
     debug('currency_converter coefficient:', coefficient)
 
