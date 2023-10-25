@@ -1,8 +1,9 @@
 import json
 import os
+import re
 import sys
 import difflib
-from argparse import ArgumentParser
+from argparse import ArgumentParser, ArgumentTypeError
 import traceback
 from docx import Document, table
 from collections import namedtuple
@@ -48,11 +49,6 @@ def get_metadata_ids(workbook: Workbook):
         identifier = row[0]
         type_col = row[1]
         name = cleanup_string(row[2])
-        value_type = row[3]
-
-        # NOTE: This is needed because the bulk load template adds ' (YYYY-MM-DD)' to DATE DEs
-        if value_type == "DATE":
-            name = name.removesuffix(" (YYYY-MM-DD)")
 
         Option_set = row[4] if row[4] else False
 
@@ -203,6 +199,32 @@ def get_country_and_year(document: Document):
         sys.exit(1)
 
 
+def fix_references_format(references: str):
+    """
+    Adds " to the third element of each references line.
+
+    :param references: The string containing the references row values.
+    :type references: str
+    :return: The references string with formatting applied.
+    :rtype: str
+    """
+    
+    new_references = ""
+
+    for reference in references.splitlines():
+        reference_partition = re.split(r': *(<.*?>) *', reference, 1)
+
+        if not reference_partition[-1].startswith('\"'):
+            reference_partition[-1] = '"' + reference_partition[-1]
+
+        if not reference_partition[-1].endswith('\"'):
+            reference_partition[-1] += '"'
+
+        new_references += f'{reference_partition[0]}: {reference_partition[1]} {reference_partition[2]}\n'
+
+    return new_references
+
+
 def extract_longtext_tables(document: Document):
     """
     Extracts tables from the source DOCX file and returns them as a list of dictionaries.
@@ -223,9 +245,15 @@ def extract_longtext_tables(document: Document):
         table_data = {}
         for row in table.rows:
             key = row.cells[0].text.rstrip()
+
             if key.startswith(INTERNAL):
                 continue
+
             value = row.cells[1].text.rstrip()
+
+            if key == "References":
+                value = fix_references_format(value)
+
             if key and value:
                 table_data[key] = value
             else:
@@ -269,10 +297,10 @@ def get_charges_in_coverage_table_data(document: Document, header_dict: dict, ta
                             table_data[year] = {}
                             year_count[year] = 1
                         else:
-                            # NOTE: Limited to 5 items as its the limit of the data entry form
-                            if year_count[year] >= 5:
+                            # NOTE: Limited to COVERAGE_TABLE_MAX items as its the limit of the data entry form
+                            if year_count[year] >= COVERAGE_TABLE_MAX:
                                 error(
-                                    f"Ccharges in coverage table has too many entries for year {year} (max 5 entries for year)"
+                                    f"Ccharges in coverage table has too many entries for year {year} (max {COVERAGE_TABLE_MAX} entries for year)"
                                 )
                                 error(f"Discarded row:")
                                 error(f"{' | '.join([cleanup_string(cell.text) for cell in row.cells])}")
@@ -416,6 +444,12 @@ def get_template_path(parser: ArgumentParser, xlsx_template: str):
     return xlsx_template
 
 
+def check_positive(value: int):
+    if value <= 0:
+        raise ArgumentTypeError
+    return value
+
+
 def main():
     """
     Parses command-line arguments and extracts tables from a .docx file.
@@ -432,12 +466,14 @@ def main():
                             if empty tries to open "Qualitative_Data_UHCPW_Template.xlsx"')
     parser.add_argument('-d', '--debug', action='store_true',
                         help='Print debug logs into a "log.json" file.')
+    parser.add_argument('-c', '--coverage_max', type=check_positive,
+                        help='Number of coverage policy table entries per year, by default 10, must be positive.')
     args = parser.parse_args()
 
     if not filepath_exists(args.docx_filename):
         parser.error(f'The source file: {args.docx_filename} doesn\'t exist')
 
-    global OUT_FILENAME, DEFAULT_TEMPLATE, DEBUG, LOG_FILE, COUNTRY, YEAR, INTERNAL
+    global OUT_FILENAME, DEFAULT_TEMPLATE, DEBUG, LOG_FILE, COUNTRY, YEAR, INTERNAL, COVERAGE_TABLE_MAX
     INTERNAL = 'Internal'
     DEFAULT_TEMPLATE = 'Qualitative_Data_UHCPW_Template.xlsx'
     DEBUG = args.debug
@@ -446,6 +482,11 @@ def main():
         LOG_FILE = "log.json"
         f = open(LOG_FILE, 'w')
         f.close()
+
+    if args.coverage_max:
+        COVERAGE_TABLE_MAX = args.coverage_max
+    else:
+        COVERAGE_TABLE_MAX = 10
 
     args.xlsx_template = get_template_path(parser, args.xlsx_template)
 

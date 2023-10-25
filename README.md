@@ -86,7 +86,7 @@ The output file will be a XLSX file named *\<COUNTRY>\_\<YEAR>\_Qualitative*Data
 ### Usage
 
 ```
-python3 make_qualitative_bulk_load_file.py [-h] [-x XLSX_TEMPLATE] [-d] docx_filename
+python3 make_qualitative_bulk_load_file.py [-h] [-x XLSX_TEMPLATE] [-d] [-c COVERAGE_MAX] docx_filename
 ```
 
 #### Positional Arguments
@@ -100,6 +100,8 @@ python3 make_qualitative_bulk_load_file.py [-h] [-x XLSX_TEMPLATE] [-d] docx_fil
 `-x XLSX_TEMPLATE`, `--xlsx_template XLSX_TEMPLATE`: The Bulk Load Quantitative XLSX template file path. If empty, the script will try to open "Quantitative_Data_UHCPW_Template.xlsx".
 
 `-d`, `--debug`: Print debug logs into a `log.json` file.
+
+`-c`, `--coverage_max`: Number of coverage policy table entries per year, by default 10, must be positive.
 
 ### Examples
 
