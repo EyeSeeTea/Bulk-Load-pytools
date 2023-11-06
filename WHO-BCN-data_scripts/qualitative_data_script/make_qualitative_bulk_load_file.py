@@ -208,7 +208,7 @@ def fix_references_format(references: str):
     :return: The references string with formatting applied.
     :rtype: str
     """
-    
+
     new_references = ""
 
     for reference in references.splitlines():
@@ -370,8 +370,8 @@ def extract_charges_in_coverage_upto19_table(document: Document):
     changes_in_coverage_2019_header = {
         "Year": "",
         "Month": "",
-        "Coverage policy area": "Policy of change in coverage policy pre2019",
-        "Policy change": "Area of change in coverage policy pre2019",
+        "Coverage policy area": "Area of change in coverage policy pre2019",
+        "Policy change": "Policy of change in coverage policy pre2019",
         "Health services targeted": "Health services targeted in change in coverage policy pre2019",
         "People targeted": "People targeted in change in coverage policy pre2019",
         "Coverage policy area (cat)": "",
@@ -393,8 +393,8 @@ def extract_charges_in_coverage_since20_table(document: Document):
     changes_in_coverage_2020_header = {
         "Year": "",
         "Month": "",
-        "Coverage policy area": "Policy of change in coverage policy",
-        "Policy change": "Area of change in coverage policy",
+        "Coverage policy area": "Area of change in coverage policy",
+        "Policy change": "Policy of change in coverage policy",
         "Health services targeted": "Health services targeted in change in coverage policy",
         "People targeted": "People targeted in change in coverage policy",
         "Was this a response to the COVID-19 pandemic?": "Was this a response to the COVID-19 pandemic?",
@@ -444,10 +444,14 @@ def get_template_path(parser: ArgumentParser, xlsx_template: str):
     return xlsx_template
 
 
-def check_positive(value: int):
-    if value <= 0:
-        raise ArgumentTypeError
-    return value
+def get_coverage_max(parser: ArgumentParser, value: int):
+    if value:
+        if value <= 0:
+            parser.error(f'The coverage_max value must be positive.')
+        else:
+            return value
+    else:
+        return 10
 
 
 def main():
@@ -466,7 +470,7 @@ def main():
                             if empty tries to open "Qualitative_Data_UHCPW_Template.xlsx"')
     parser.add_argument('-d', '--debug', action='store_true',
                         help='Print debug logs into a "log.json" file.')
-    parser.add_argument('-c', '--coverage_max', type=check_positive,
+    parser.add_argument('-c', '--coverage_max', type=int,
                         help='Number of coverage policy table entries per year, by default 10, must be positive.')
     args = parser.parse_args()
 
@@ -483,10 +487,7 @@ def main():
         f = open(LOG_FILE, 'w')
         f.close()
 
-    if args.coverage_max:
-        COVERAGE_TABLE_MAX = args.coverage_max
-    else:
-        COVERAGE_TABLE_MAX = 10
+    COVERAGE_TABLE_MAX = get_coverage_max(parser, args.coverage_max)
 
     args.xlsx_template = get_template_path(parser, args.xlsx_template)
 
