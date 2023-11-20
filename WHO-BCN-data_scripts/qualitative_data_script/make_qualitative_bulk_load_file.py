@@ -3,13 +3,12 @@ import os
 import re
 import sys
 import difflib
-from argparse import ArgumentParser, ArgumentTypeError
+from argparse import ArgumentParser
 import traceback
 from docx import Document, table
 from collections import namedtuple
 import openpyxl
 from openpyxl.workbook import Workbook
-
 from openpyxl.cell import Cell, MergedCell
 
 
@@ -25,8 +24,8 @@ def get_country_id(country: str, countries_ids: dict):
     if country_key:
         return countries_ids[country_key]
     else:
-        error = f'Can\'t find orgUnit id for country: {country}'
-        raise ValueError(error)
+        error_msg = f'Can\'t find orgUnit id for country: {country}'
+        raise ValueError(error_msg)
 
 
 def get_data_element_id(de: str, data_elements_ids: dict):
@@ -105,7 +104,7 @@ def make_matched_values(tables_data: list[dict], coverage_tables_data: dict, ids
 
 def write_org_unit(last_cell: Cell, matched_values: dict):
     for country_id, country_data in matched_values.items():
-        for year in country_data:
+        for _ in country_data:
             new_cell = last_cell.offset(row=1, column=0)
             new_cell.value = f'=_{country_id}'
 
@@ -193,7 +192,7 @@ def get_country_and_year(document: Document):
             raise ValueError(f'Invalid year format for: {year}')
 
         return country, year
-    except Exception as e:
+    except Exception:
         print('First line of the doc should be: Country (year)', file=sys.stderr)
         traceback.print_exc()
         sys.exit(1)
