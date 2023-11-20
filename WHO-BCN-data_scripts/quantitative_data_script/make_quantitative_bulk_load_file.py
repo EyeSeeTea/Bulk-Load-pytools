@@ -29,6 +29,8 @@ CATA_QUINTILE_NAME = 'Share of households with catastrophic health spending by c
 CATA_TOTAL_NAME = 'Share of households with catastrophic health spending (total)'
 FURTHERIMPOV_CATA_NAME = 'Share of households with catastrophic health spending who are further impoverished'
 IMPOV_CATA_NAME = 'Share of households with catastrophic health spending who are impoverished'
+GGHED_GGE_NAME = 'Public spending on health as a share of government spending'
+UN_EUSILC_DENTAL_QUINTILE_NAME = 'Self-reported unmet need for dental care due to cost, distance and waiting time (quintile)'
 
 COUNTRY_DICT = {
     'BIH': 'Bosnia and Herzegovina',
@@ -522,11 +524,12 @@ def make_matched_values(csv_values_dict: dict, ids: MetadataIds):
     latest_pre_2019_des_dict = {
         CATA_HEALTHCARE_TOTAL_NAME: "0",
         OOP_CHE_NAME: "0",
-        "Public spending on health as a share of government spending": "0",
+        GGHED_GGE_NAME: "0",
         CATA_QUINTILE_NAME: "0",
         CATA_TOTAL_NAME: "0",
         FURTHERIMPOV_CATA_NAME: "0",
-        IMPOV_CATA_NAME: "0"
+        IMPOV_CATA_NAME: "0",
+        UN_EUSILC_DENTAL_QUINTILE_NAME: "0"
     }
 
     for country, country_data in csv_values_dict.items():
