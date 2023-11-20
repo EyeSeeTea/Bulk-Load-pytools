@@ -3,6 +3,7 @@ import csv
 import sys
 import json
 import argparse
+import difflib
 from argparse import ArgumentParser
 import traceback
 from collections import namedtuple
@@ -480,7 +481,8 @@ def get_indicator_id(ids: MetadataIds, name: str):
         return ids.indicators[name]
     except KeyError:
         print(f'ERROR: Data element "{name}" can\'t be matched with an ID, check metadata')
-        exit(1)
+        print(f'Closest candidates: {difflib.get_close_matches(name, ids.indicators.keys())}')
+        return None
 
 
 def check_de_is_latest_group(latest_pre_2019_des_dict: dict, indicator_name: str, year: str):
@@ -541,6 +543,8 @@ def make_matched_values(csv_values_dict: dict, ids: MetadataIds):
 
             for indicator_name, indicator_combos in indicators.items():
                 indicator_id = get_indicator_id(ids, indicator_name)
+                if not indicator_id:
+                    continue
 
                 data[country_id][year] = create_dict_if_dont_exist(data[country_id][year], indicator_id)
 
