@@ -485,30 +485,49 @@ def get_indicator_id(ids: MetadataIds, name: str):
         return None
 
 
-def check_de_is_latest_group(latest_pre_2019_des_dict: dict, indicator_name: str, year: str):
-    """Check if the DE need to populate a latest version of it and returns the latest name and year if it has latest version
+def update_latest_dict(latest_pre_2019_des_dict: dict, indicator_name: str, year: str, combo_id: str, value: str):
+    """Check if the DE need to populate a latest version of it and returns the updated latest_pre_2019_des_dict
 
     Args:
-        latest_pre_2019_des_dict (dict): _description_
+        latest_pre_2019_des_dict (dict): Dictionary storing the latest year, combo and value
         indicator_name (str): Data element name
         year (str): Data element value year
-
-    Returns:
-        latest_pre_2019_des_dict (dict): Updated latest_pre_2019_des_dict,
-        latest_indicator_name (str | None): Name of the latest DE or None if indicator_name has no latest DE,
-        latest_year(str | None): Latest year data exist for latest_indicator_name
+        combo_id (str): Data element value combo
+        value (str): Data element value
     """
 
-    latest_indicator_name = None
     latest_year = None
     if indicator_name in latest_pre_2019_des_dict:
-        latest_year = latest_pre_2019_des_dict[indicator_name]
+        latest_year = latest_pre_2019_des_dict[indicator_name][0]
 
         if int(latest_year) < int(year):
-            latest_pre_2019_des_dict[indicator_name] = year
-            latest_indicator_name = indicator_name + " - 2019 or LAY"
+            latest_pre_2019_des_dict[indicator_name] = [year, combo_id, value]
 
-    return latest_pre_2019_des_dict, latest_indicator_name, latest_year
+
+def store_latest_data(data: dict, ids: MetadataIds, latest_pre_2019_des_dict: dict, country_id: str):
+    """Stores the data values for the latest DEs for the given country
+
+    Args:
+        data (dict): Dictionary with the matched data
+        ids (MetadataIds): named tuple containing dictionaries with the ids of indicators, countries and combos used
+        latest_pre_2019_des_dict (dict): Dictionary storing the latest year, combo and value
+        country_id (str): Data country ID
+    """
+
+    for indicator_name, latest_list in latest_pre_2019_des_dict.items():
+        latest_year, latest_combo, latest_value = latest_list
+        if latest_year != "0":
+            latest_indicator_name = indicator_name + " - 2019 or LAY"
+            last_indicator_id = get_indicator_id(ids, latest_indicator_name)
+            if not last_indicator_id:
+                continue
+
+            data[country_id][latest_year] = create_dict_if_dont_exist(data[country_id][latest_year], last_indicator_id)
+
+            data[country_id][latest_year][last_indicator_id][latest_combo] = latest_value
+            debug(
+                f'pre_2019_de_names check: "{latest_indicator_name}" | {latest_year}" | {data[country_id][latest_year][last_indicator_id][latest_combo]}'
+            )
 
 
 def make_matched_values(csv_values_dict: dict, ids: MetadataIds):
@@ -523,18 +542,19 @@ def make_matched_values(csv_values_dict: dict, ids: MetadataIds):
     """
 
     data = {}
-    latest_pre_2019_des_dict = {
-        CATA_HEALTHCARE_TOTAL_NAME: "0",
-        OOP_CHE_NAME: "0",
-        GGHED_GGE_NAME: "0",
-        CATA_QUINTILE_NAME: "0",
-        CATA_TOTAL_NAME: "0",
-        FURTHERIMPOV_CATA_NAME: "0",
-        IMPOV_CATA_NAME: "0",
-        UN_EUSILC_DENTAL_QUINTILE_NAME: "0"
-    }
 
     for country, country_data in csv_values_dict.items():
+        latest_pre_2019_des_dict = {
+            CATA_HEALTHCARE_TOTAL_NAME: ["0", "", ""],
+            OOP_CHE_NAME: ["0", "", ""],
+            GGHED_GGE_NAME: ["0", "", ""],
+            CATA_QUINTILE_NAME: ["0", "", ""],
+            CATA_TOTAL_NAME: ["0", "", ""],
+            FURTHERIMPOV_CATA_NAME: ["0", "", ""],
+            IMPOV_CATA_NAME: ["0", "", ""],
+            UN_EUSILC_DENTAL_QUINTILE_NAME: ["0", "", ""]
+        }
+
         country_id = ids.countries[country]
         data[country_id] = {}
 
@@ -561,20 +581,11 @@ def make_matched_values(csv_values_dict: dict, ids: MetadataIds):
                         debug("check_mean_monthly_indicator: ", indicator_name, value, float(value)/12)
                         value = str(float(value)/12)
 
-                    latest_pre_2019_des_dict, latest_indicator_name, latest_year = check_de_is_latest_group(
-                        latest_pre_2019_des_dict, indicator_name, year
-                    )
-                    if latest_indicator_name:
-                        last_indicator_id = get_indicator_id(ids, latest_indicator_name)
-
-                        data[country_id][year] = create_dict_if_dont_exist(data[country_id][year], last_indicator_id)
-
-                        data[country_id][year][last_indicator_id][combo_id] = value
-                        debug(
-                            f'pre_2019_de_names check: "{indicator_name} | {year}, "{latest_indicator_name}" | {latest_year}"'
-                        )
+                    update_latest_dict(latest_pre_2019_des_dict, indicator_name, year, combo_id, value)
 
                     data[country_id][year][indicator_id][combo_id] = value
+
+        store_latest_data(data, ids, latest_pre_2019_des_dict, country_id)
 
     debug("pre_2019_de_names: ", dump_json_var(latest_pre_2019_des_dict))
     return data
