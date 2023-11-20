@@ -24,6 +24,11 @@ VHI_CHE_NAME = 'Voluntary health insurance spending as a share of current spendi
 OOP_CHE_NAME = 'Out-of-pocket payments as a share of current spending on health (oop)'
 OTHER_CHE_NAME = 'Other spending as a share of current spending on health'
 POVERTY_LINE_OLD_NAME = 'Percent below subsistence expenditure line'
+CATA_HEALTHCARE_TOTAL_NAME = 'Breakdown of catastrophic health spending by type of health care (total)'
+CATA_QUINTILE_NAME = 'Share of households with catastrophic health spending by consumption quintile'
+CATA_TOTAL_NAME = 'Share of households with catastrophic health spending (total)'
+FURTHERIMPOV_CATA_NAME = 'Share of households with catastrophic health spending who are further impoverished'
+IMPOV_CATA_NAME = 'Share of households with catastrophic health spending who are impoverished'
 
 COUNTRY_DICT = {
     'BIH': 'Bosnia and Herzegovina',
@@ -145,16 +150,16 @@ OLD_NAMES_DICT = {
         'Medical products': 'Annual out-of-pocket payments for medical products per person by consumption quintile',
     },
     'Catastrophic out-of-pocket payments (total)': {
-        'NA': 'Share of households with catastrophic health spending (total)',
-        'Medicines': 'Breakdown of catastrophic health spending by type of health care (total)',
-        'Inpatient care': 'Breakdown of catastrophic health spending by type of health care (total)',
-        'Dental care': 'Breakdown of catastrophic health spending by type of health care (total)',
-        'Outpatient care': 'Breakdown of catastrophic health spending by type of health care (total)',
-        'Diagnostic tests': 'Breakdown of catastrophic health spending by type of health care (total)',
-        'Medical products': 'Breakdown of catastrophic health spending by type of health care (total)',
+        'NA': CATA_TOTAL_NAME,
+        'Medicines': CATA_HEALTHCARE_TOTAL_NAME,
+        'Inpatient care': CATA_HEALTHCARE_TOTAL_NAME,
+        'Dental care': CATA_HEALTHCARE_TOTAL_NAME,
+        'Outpatient care': CATA_HEALTHCARE_TOTAL_NAME,
+        'Diagnostic tests': CATA_HEALTHCARE_TOTAL_NAME,
+        'Medical products': CATA_HEALTHCARE_TOTAL_NAME,
     },
     'Catastrophic out-of-pocket payments (by qunitile)': {
-        'NA': 'Share of households with catastrophic health spending by consumption quintile',
+        'NA': CATA_QUINTILE_NAME,
         'Medicines': 'Breakdown of catastrophic health spending by type of health care (by consumption quintile)',
         'Inpatient care': 'Breakdown of catastrophic health spending by type of health care (by consumption quintile)',
         'Dental care': 'Breakdown of catastrophic health spending by type of health care (by consumption quintile)',
@@ -168,8 +173,8 @@ OLD_NAMES_DICT = {
     'Impoverished (all households)': 'Share of Impoverished households (all households)',
     'Impoverishing health spending': 'Share of households with impoverishing health spending',
     'At risk of impoverishment (catastrophic households)': 'Share of households with catastrophic health spending who at risk of impoverishment',
-    'further impoverished (catastrophic households)': 'Share of households with catastrophic health spending who are further impoverished',
-    'Impoverished (catastrophic households)': 'Share of households with catastrophic health spending who are impoverished',
+    'further impoverished (catastrophic households)': FURTHERIMPOV_CATA_NAME,
+    'Impoverished (catastrophic households)': IMPOV_CATA_NAME,
     'Not at risk of impoverishment (catastrophic households)': 'Share of households with catastrophic health spending who are not at risk of impoverishment',
     'Out-of-pocket payments as a share of total household spending among households with catastrophic spending (by quintile)': 'Out-of-pocket payments as a share of total household spending among households with catastrophic health spending by consumption quintile',
     'Average out-of-pocket payments as a share of total household spending among further impoverished households': 'Out-of-pocket payments as a share of total household spending among further impoverished households',
@@ -198,7 +203,7 @@ INDICATOR_IGNORING_SERVICE = [
 ]
 
 INDICATOR_IGNORING_QUINTILE = [
-    'Breakdown of catastrophic health spending by type of health care (total)',
+    CATA_HEALTHCARE_TOTAL_NAME,
     'Public spending on health as a share of current spending on health by type of care',
     'Annual out-of-pocket payments on health care per person by type of health care (total)',
     'Out-of-pocket payments as a share of current spending on health by type of care',
@@ -221,7 +226,7 @@ def get_new_name(indicator_name: str, service: str):
         ValueError: If a DE can't be mapped 
 
     Returns:
-        (str): New data element name
+        new_indicator_name (str): New data element name
     """
 
     if indicator_name in OLD_NAMES_DICT:
@@ -244,7 +249,7 @@ def make_combo_string(quintile: str, service: str):
         service (str): categoryOptionCombos name
 
     Returns:
-        (str): categoryOptionCombos name
+        combo (str): categoryOptionCombos name
     """
 
     if service == 'NA':
@@ -271,7 +276,7 @@ def check_for_empty_csv_fields(**elements):
 
     for name, value in elements.items():
         if name != 'row' and not value:
-            print(f'Empty {name} variable in CSV file in row:\n{elements["row"]}')
+            print(f'WARNING: Empty {name} variable in CSV file in row:\n{elements["row"]}')
 
 
 def currency_converter(amount: str, country: str, year: str, figure: str):
@@ -284,7 +289,7 @@ def currency_converter(amount: str, country: str, year: str, figure: str):
         figure (str): Figure code
 
     Returns:
-        (str): New value with currency conversion applied
+        adjusted_amount (str): New value with currency conversion applied
     """
 
     currency_figures = ["F5", "F9", "F10a", "F10b", "F10c", "F10d", "F10e", "F10f", "F26"]
@@ -334,13 +339,29 @@ def get_csv_indicator_value(value: str, real_value: str):
         real_value (str): CSV real_value field
 
     Returns:
-        (str): Appropriate value based on --real_value flag
+        real_value (str): Appropriate value based on --real_value flag
     """
 
     if REAL_VALUE:
         return real_value if real_value != "NA" else value
 
     return value
+
+
+def create_dict_if_dont_exist(dictionary: dict, key: str):
+    """check if key is in nested dictionary and creates a new empty dict if its not
+
+    Args:
+        dict (dict): Nested dictionary
+        key (str): dictionary to check
+
+    Returns:
+        dictionary: Updated nested dictionary
+    """
+
+    if key not in dictionary:
+        dictionary[key] = {}
+    return dictionary
 
 
 def extract_values_from_csv(filename: str):
@@ -350,7 +371,7 @@ def extract_values_from_csv(filename: str):
         filename (str): CSV file name
 
     Returns:
-        (dict): Dictionary with the CSV file data
+        values (dict): Dictionary with the CSV file data
     """
 
     values = {}
@@ -384,12 +405,9 @@ def extract_values_from_csv(filename: str):
 
                 country_name = COUNTRY_DICT[country]
 
-                if country_name not in values:
-                    values[country_name] = {}
-                if year not in values[country_name]:
-                    values[country_name][year] = {}
-                if indicator_name not in values[country_name][year]:
-                    values[country_name][year][indicator_name] = {}
+                values = create_dict_if_dont_exist(values, country_name)
+                values[country_name] = create_dict_if_dont_exist(values[country_name], year)
+                values[country_name][year] = create_dict_if_dont_exist(values[country_name][year], indicator_name)
 
                 service = 'NA' if indicator_name in INDICATOR_IGNORING_SERVICE else service
                 quintile = 'NA' if indicator_name in INDICATOR_IGNORING_QUINTILE else quintile
@@ -414,7 +432,7 @@ def get_metadata_ids(workbook: Workbook):
         workbook (Workbook): XLSX file with the bulk load template
 
     Returns:
-        (MetadataIds): named tuple containing dictionaries with the ids of indicators, countries and combos used
+        ids (MetadataIds): named tuple containing dictionaries with the ids of indicators, countries and combos used
     """
 
     global COC_DEFAULT_ID, COC_TOTAL_ID
@@ -446,6 +464,49 @@ def get_metadata_ids(workbook: Workbook):
     return MetadataIds(indicators_id_dict, countries_id_dict, combos_id_dict)
 
 
+def get_indicator_id(ids: MetadataIds, name: str):
+    """Gets the ID of the provided DE and raises an error if the ID is not found
+
+    Args:
+        ids (MetadataIds): named tuple containing dictionaries with the ids of indicators, countries and combos used
+        name (str): Data element name
+
+    Returns:
+        id (str): ID of the provided DE
+    """
+    try:
+        return ids.indicators[name]
+    except KeyError:
+        print(f'ERROR: Data element "{name}" can\'t be matched with an ID, check metadata')
+        exit(1)
+
+
+def check_de_is_latest_group(latest_pre_2019_des_dict: dict, indicator_name: str, year: str):
+    """Check if the DE need to populate a latest version of it and returns the latest name and year if it has latest version
+
+    Args:
+        latest_pre_2019_des_dict (dict): _description_
+        indicator_name (str): Data element name
+        year (str): Data element value year
+
+    Returns:
+        latest_pre_2019_des_dict (dict): Updated latest_pre_2019_des_dict,
+        latest_indicator_name (str | None): Name of the latest DE or None if indicator_name has no latest DE,
+        latest_year(str | None): Latest year data exist for latest_indicator_name
+    """
+
+    latest_indicator_name = None
+    latest_year = None
+    if indicator_name in latest_pre_2019_des_dict:
+        latest_year = latest_pre_2019_des_dict[indicator_name]
+
+        if int(latest_year) < int(year):
+            latest_pre_2019_des_dict[indicator_name] = year
+            latest_indicator_name = indicator_name + " - 2019 or LAY"
+
+    return latest_pre_2019_des_dict, latest_indicator_name, latest_year
+
+
 def make_matched_values(csv_values_dict: dict, ids: MetadataIds):
     """Maps the formNames and data of csv_values_dict with the metadata ids, applies direct monthly transformation
 
@@ -458,19 +519,27 @@ def make_matched_values(csv_values_dict: dict, ids: MetadataIds):
     """
 
     data = {}
+    latest_pre_2019_des_dict = {
+        CATA_HEALTHCARE_TOTAL_NAME: "0",
+        OOP_CHE_NAME: "0",
+        "Public spending on health as a share of government spending": "0",
+        CATA_QUINTILE_NAME: "0",
+        CATA_TOTAL_NAME: "0",
+        FURTHERIMPOV_CATA_NAME: "0",
+        IMPOV_CATA_NAME: "0"
+    }
 
     for country, country_data in csv_values_dict.items():
         country_id = ids.countries[country]
         data[country_id] = {}
 
         for year, indicators in country_data.items():
-            if year not in data[country_id]:
-                data[country_id][year] = {}
+            data[country_id] = create_dict_if_dont_exist(data[country_id], year)
 
             for indicator_name, indicator_combos in indicators.items():
-                indicator_id = ids.indicators[indicator_name]
-                if indicator_id not in data[country_id][year]:
-                    data[country_id][year][indicator_id] = {}
+                indicator_id = get_indicator_id(ids, indicator_name)
+
+                data[country_id][year] = create_dict_if_dont_exist(data[country_id][year], indicator_id)
 
                 store_transformation_de(indicator_name, indicator_id)
 
@@ -485,8 +554,22 @@ def make_matched_values(csv_values_dict: dict, ids: MetadataIds):
                         debug("check_mean_monthly_indicator: ", indicator_name, value, float(value)/12)
                         value = str(float(value)/12)
 
+                    latest_pre_2019_des_dict, latest_indicator_name, latest_year = check_de_is_latest_group(
+                        latest_pre_2019_des_dict, indicator_name, year
+                    )
+                    if latest_indicator_name:
+                        last_indicator_id = get_indicator_id(ids, latest_indicator_name)
+
+                        data[country_id][year] = create_dict_if_dont_exist(data[country_id][year], last_indicator_id)
+
+                        data[country_id][year][last_indicator_id][combo_id] = value
+                        debug(
+                            f'pre_2019_de_names check: "{indicator_name} | {year}, "{latest_indicator_name}" | {latest_year}"'
+                        )
+
                     data[country_id][year][indicator_id][combo_id] = value
 
+    debug("pre_2019_de_names: ", dump_json_var(latest_pre_2019_des_dict))
     return data
 
 
@@ -554,7 +637,7 @@ def get_spending_share_indicator(matched_values: dict, ids: dict, de: str, name:
     try:
         return float(matched_values[ids["country_id"]][ids["year"]][de][ids["combo_id"]])
     except KeyError:
-        print(f'Data element "{name}" for OU {ids["country_id"]} - {ids["year"]} is missing')
+        print(f'WARNING: Data element "{name}" for OU {ids["country_id"]} - {ids["year"]} is missing')
         return None
 
 
@@ -593,7 +676,7 @@ def make_transformations(matched_values: dict):
                             )
                         else:
                             print(
-                                f'Data element "{OTHER_CHE_NAME}" for OU {country_id} - {year} is missing values for transformation'
+                                f'WARNING: Data element "{OTHER_CHE_NAME}" for OU {country_id} - {year} is missing values for transformation'
                             )
                             matched_values[country_id][year][indicator_id][combo_id] = ""
 
@@ -785,6 +868,7 @@ DEBUG = False
 LOG_FILE = 'log.json'
 CURRENCY = False
 CURRENCY_TABLE = None
+
 
 def main():
     parser = argparse.ArgumentParser(description='Process CSV from "Data Extraction Tool" into "Bulk Load" XLSX files. \
