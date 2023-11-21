@@ -359,14 +359,10 @@ def create_dict_if_dont_exist(dictionary: dict, key: str):
     Args:
         dict (dict): Nested dictionary
         key (str): dictionary to check
-
-    Returns:
-        dictionary: Updated nested dictionary
     """
 
     if key not in dictionary:
         dictionary[key] = {}
-    return dictionary
 
 
 def extract_values_from_csv(filename: str):
@@ -410,9 +406,9 @@ def extract_values_from_csv(filename: str):
 
                 country_name = COUNTRY_DICT[country]
 
-                values = create_dict_if_dont_exist(values, country_name)
-                values[country_name] = create_dict_if_dont_exist(values[country_name], year)
-                values[country_name][year] = create_dict_if_dont_exist(values[country_name][year], indicator_name)
+                create_dict_if_dont_exist(values, country_name)
+                create_dict_if_dont_exist(values[country_name], year)
+                create_dict_if_dont_exist(values[country_name][year], indicator_name)
 
                 service = 'NA' if indicator_name in INDICATOR_IGNORING_SERVICE else service
                 quintile = 'NA' if indicator_name in INDICATOR_IGNORING_QUINTILE else quintile
@@ -479,6 +475,7 @@ def get_indicator_id(ids: MetadataIds, name: str):
     Returns:
         id (str): ID of the provided DE
     """
+
     try:
         return ids.indicators[name]
     except KeyError:
@@ -561,14 +558,14 @@ def make_matched_values(csv_values_dict: dict, ids: MetadataIds):
         data[country_id] = {}
 
         for year, indicators in country_data.items():
-            data[country_id] = create_dict_if_dont_exist(data[country_id], year)
+            create_dict_if_dont_exist(data[country_id], year)
 
             for indicator_name, indicator_combos in indicators.items():
                 indicator_id = get_indicator_id(ids, indicator_name)
                 if not indicator_id:
                     continue
 
-                data[country_id][year] = create_dict_if_dont_exist(data[country_id][year], indicator_id)
+                create_dict_if_dont_exist(data[country_id][year], indicator_id)
 
                 store_transformation_de(indicator_name, indicator_id)
 
@@ -726,19 +723,29 @@ def make_transformations(matched_values: dict):
                                 f"make_transformations calc: {country_id} - {year} - {indicator_id} - {matched_values[country_id][year][indicator_id][combo_id]}"
                             )
 
-                        gghed_che_value = get_spending_share_indicator(matched_values, ids, GGHED_CHE, GGHED_CHE_NAME)
-                        vhi_che_value = get_spending_share_indicator(matched_values, ids, VHI_CHE, VHI_CHE_NAME)
-                        oop_che_value = get_spending_share_indicator(matched_values, ids, OOP_CHE, OOP_CHE_NAME)
+            if any(ind in indicators.keys() for ind in [GGHED_CHE, VHI_CHE, OOP_CHE, OTHER_CHE]):
+                ids = {"country_id": country_id, "year": year, "combo_id": COC_DEFAULT_ID}
 
-                        if gghed_che_value and vhi_che_value and oop_che_value:
-                            matched_values[country_id][year][indicator_id][combo_id] = str(
-                                100-(gghed_che_value + vhi_che_value + oop_che_value)
-                            )
-                        else:
-                            print(
-                                f'WARNING: Data element "{OTHER_CHE_NAME}" for OU {country_id} - {year} is missing values for transformation'
-                            )
-                            matched_values[country_id][year][indicator_id][combo_id] = ""
+                gghed_che_value = get_spending_share_indicator(matched_values, ids, GGHED_CHE, GGHED_CHE_NAME)
+                vhi_che_value = get_spending_share_indicator(matched_values, ids, VHI_CHE, VHI_CHE_NAME)
+                oop_che_value = get_spending_share_indicator(matched_values, ids, OOP_CHE, OOP_CHE_NAME)
+
+                create_dict_if_dont_exist(matched_values[country_id][year], OTHER_CHE)
+                create_dict_if_dont_exist(matched_values[country_id][year][OTHER_CHE], COC_DEFAULT_ID)
+
+                if gghed_che_value and vhi_che_value and oop_che_value:
+                    debug(f"make_transformations: {country_id} - {year} - {OTHER_CHE}")
+                    matched_values[country_id][year][OTHER_CHE][COC_DEFAULT_ID] = str(
+                        100-(gghed_che_value + vhi_che_value + oop_che_value)
+                    )
+                    debug(
+                        f"make_transformations calc: {country_id} - {year} - {OTHER_CHE} - {matched_values[country_id][year][OTHER_CHE][COC_DEFAULT_ID]}"
+                    )
+                else:
+                    print(
+                        f'WARNING: Data element "{OTHER_CHE_NAME}" for OU {country_id} - {year} is missing values for transformation'
+                    )
+                    matched_values[country_id][year][OTHER_CHE][COC_DEFAULT_ID] = ""
 
 
 def write_org_unit(last_cell: Cell, matched_values: dict):
@@ -991,12 +998,13 @@ def main():
     debug(f'combos ids:\n len: {len(ids.combos)}\n values:\n', dump_json_var(ids.combos))
 
     matched_values = make_matched_values(csv_values_dict, ids)
+    make_transformations(matched_values)
 
     csv_count = get_matched_values_len(matched_values)
+
     debug(f'matched_values count: {csv_count}\n')
     debug('matched_values:\n', dump_json_var(matched_values))
 
-    make_transformations(matched_values)
 
     excel_count = write_values(wb, matched_values)
     debug(f'write_values count: {excel_count}\n')
