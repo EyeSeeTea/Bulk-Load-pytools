@@ -19,7 +19,9 @@ MetadataIds = namedtuple("MetadataIds", "indicators, countries, combos")
 SEL_MONTHLY_NAME = 'Mean monthly subsistence expenditure line (cost of meeting basic needs)'
 CTP_MONTHLY_NAME = 'Mean monthly capacity to pay for health care'
 SHARE_HH_WITH_OOP_TOTAL_NAME = 'Share of households with out-of-pocket payments for health care (total)'
+SHARE_HH_NO_OOP_TOTAL_NAME = 'Share of households without out-of-pocket payments for health care (total)'
 SHARE_HH_WITH_OOP_QUINTILE_NAME = 'Share of households with out-of-pocket payments for health care (by consumption quintile)'
+SHARE_HH_NO_OOP_QUINTILE_NAME = 'Share of households without out-of-pocket payments for health care (by consumption quintile)'
 GGHED_CHE_NAME = 'Public spending on health as a share of current spending on health'
 VHI_CHE_NAME = 'Voluntary health insurance spending as a share of current spending on health'
 OOP_CHE_NAME = 'Out-of-pocket payments as a share of current spending on health (oop)'
@@ -184,8 +186,8 @@ OLD_NAMES_DICT = {
     'Mean annual capacity to pay': CTP_MONTHLY_NAME,
     POVERTY_LINE_OLD_NAME: 'Percent below subsistence expenditure line (basic needs line)',
     'Mean annual subsistence expenditure line': SEL_MONTHLY_NAME,
-    'Share of households without out-of-pocket payments (by quintile)': 'Share of households without out-of-pocket payments for health care (by consumption quintile)',
-    'Share of households without out-of-pocket payments (total)': 'Share of households without out-of-pocket payments for health care (total)',
+    'Share of households without out-of-pocket payments (by quintile)': SHARE_HH_NO_OOP_QUINTILE_NAME,
+    'Share of households without out-of-pocket payments (total)': SHARE_HH_NO_OOP_TOTAL_NAME,
     'Share of households with out-of-pocket payments (by quintile)': SHARE_HH_WITH_OOP_QUINTILE_NAME,
     'Share of households with out-of-pocket payments (total)': SHARE_HH_WITH_OOP_TOTAL_NAME,
     'Mean annual per capita OOP (by quintile)': 'Annual out-of-pocket payments for health care per person (by consumption quintile)',
@@ -593,7 +595,9 @@ def make_matched_values(csv_values_dict: dict, ids: MetadataIds):
 
 # TRANSFORMATIONS
 SHARE_HH_WITH_OOP_TOTAL = None
+SHARE_HH_NO_OOP_TOTAL = None
 SHARE_HH_WITH_OOP_QUINTILE = None
+SHARE_HH_NO_OOP_QUINTILE = None
 GGHED_CHE = None
 VHI_CHE = None
 OOP_CHE = None
@@ -623,12 +627,17 @@ def store_transformation_de(indicator_name: str, indicator_id: str):
         indicator_id (str): data element id
     """
 
-    global SHARE_HH_WITH_OOP_TOTAL, SHARE_HH_WITH_OOP_QUINTILE, GGHED_CHE, VHI_CHE, OOP_CHE, OTHER_CHE
+    global SHARE_HH_WITH_OOP_TOTAL, SHARE_HH_NO_OOP_TOTAL, SHARE_HH_WITH_OOP_QUINTILE, SHARE_HH_NO_OOP_QUINTILE
+    global GGHED_CHE, VHI_CHE, OOP_CHE, OTHER_CHE
 
     if indicator_name == SHARE_HH_WITH_OOP_TOTAL_NAME:
         SHARE_HH_WITH_OOP_TOTAL = indicator_id
+    elif indicator_name == SHARE_HH_NO_OOP_TOTAL_NAME:
+        SHARE_HH_NO_OOP_TOTAL = indicator_id
     elif indicator_name == SHARE_HH_WITH_OOP_QUINTILE_NAME:
         SHARE_HH_WITH_OOP_QUINTILE = indicator_id
+    elif indicator_name == SHARE_HH_NO_OOP_QUINTILE_NAME:
+        SHARE_HH_NO_OOP_QUINTILE = indicator_id
     elif indicator_name == GGHED_CHE_NAME:
         GGHED_CHE = indicator_id
     elif indicator_name == VHI_CHE_NAME:
@@ -637,6 +646,31 @@ def store_transformation_de(indicator_name: str, indicator_id: str):
         OOP_CHE = indicator_id
     elif indicator_name == OTHER_CHE_NAME:
         OTHER_CHE = indicator_id
+
+
+def get_indicator_value(matched_values: dict, country_id: str, year: str, indicator_id: str, combo_id: str, default: str | None = None):
+    """_summary_
+
+    Args:
+        matched_values (dict): Dictionary with the values indexed by metadata id
+        country_id (str): Value country ID
+        year (str): Value year
+        indicator_id (str): Value data element ID
+        combo_id (str): Value combo ID
+        default (str | None, optional): Value to return if not found, print find error if not provided. Defaults to None.
+
+    Returns:
+        value (str): Found value or default
+    """
+
+    try:
+        return matched_values[country_id][year][indicator_id][combo_id]
+    except KeyError:
+        if default:
+            return default
+
+        print(f'ERROR: Can\'t find value for country: {country_id} year: {year} de: {indicator_id} combo: {combo_id}')
+        return None
 
 
 def get_spending_share_indicator(matched_values: dict, ids: dict, de: str, name: str):
@@ -667,22 +701,30 @@ def make_transformations(matched_values: dict):
         matched_values (dict): Dictionary with the values indexed by metadata id
     """
 
-    households_ids = [SHARE_HH_WITH_OOP_TOTAL, SHARE_HH_WITH_OOP_QUINTILE]
+    households_ids = {
+        SHARE_HH_WITH_OOP_TOTAL: SHARE_HH_NO_OOP_TOTAL,
+        SHARE_HH_WITH_OOP_QUINTILE: SHARE_HH_NO_OOP_QUINTILE
+    }
 
     for country_id, country_data in matched_values.items():
         for year, indicators in country_data.items():
             for indicator_id, indicator_combos in indicators.items():
-                if indicator_id in households_ids:
+                if indicator_id in households_ids.keys():
                     debug(f"make_transformations: {country_id} - {year} - {indicator_id}")
 
-                    for combo_id, value in indicator_combos.items():
-                        matched_values[country_id][year][indicator_id][combo_id] = str(100 - float(value))
+                    without_id = households_ids[indicator_id]
+                    if not bool(indicator_combos):
+                        indicator_combos = matched_values[country_id][year][without_id]
 
-                if indicator_id == OTHER_CHE:
-                    debug(f"make_transformations: {country_id} - {year} - {indicator_id}")
+                    for combo_id, _ in indicator_combos.items():
+                        without_value = get_indicator_value(matched_values, country_id, year, without_id, combo_id)
 
-                    for combo_id, value in indicator_combos.items():
-                        ids = {"country_id": country_id, "year": year, "combo_id": combo_id}
+                        if without_value:
+                            create_dict_if_dont_exist(matched_values[country_id][year][indicator_id], combo_id)
+                            matched_values[country_id][year][indicator_id][combo_id] = str(100 - float(without_value))
+                            debug(
+                                f"make_transformations calc: {country_id} - {year} - {indicator_id} - {matched_values[country_id][year][indicator_id][combo_id]}"
+                            )
 
                         gghed_che_value = get_spending_share_indicator(matched_values, ids, GGHED_CHE, GGHED_CHE_NAME)
                         vhi_che_value = get_spending_share_indicator(matched_values, ids, VHI_CHE, VHI_CHE_NAME)
