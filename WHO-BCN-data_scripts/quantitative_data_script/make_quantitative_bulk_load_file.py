@@ -496,11 +496,15 @@ def update_latest_dict(latest_pre_2019_des_dict: dict, indicator_name: str, year
     """
 
     latest_year = None
-    if indicator_name in latest_pre_2019_des_dict:
-        latest_year = latest_pre_2019_des_dict[indicator_name][0]
+    if indicator_name in latest_pre_2019_des_dict and int(year) < 2020:
+        latest_year = latest_pre_2019_des_dict[indicator_name].get(combo_id, ['0'])[0]
 
         if int(latest_year) < int(year):
-            latest_pre_2019_des_dict[indicator_name] = [year, combo_id, value]
+            latest_pre_2019_des_dict[indicator_name][combo_id] = [year, value]
+
+        debug(
+            f'update_latest_dict check: indicator_name: "{indicator_name}" | year: {year}" | latest_year: {latest_year}'
+        )
 
 
 def store_latest_data(data: dict, ids: MetadataIds, latest_pre_2019_des_dict: dict, country_id: str):
@@ -513,20 +517,22 @@ def store_latest_data(data: dict, ids: MetadataIds, latest_pre_2019_des_dict: di
         country_id (str): Data country ID
     """
 
-    for indicator_name, latest_list in latest_pre_2019_des_dict.items():
-        latest_year, latest_combo, latest_value = latest_list
-        if latest_year != "0":
-            latest_indicator_name = indicator_name + " - 2019 or LAY"
-            last_indicator_id = get_indicator_id(ids, latest_indicator_name)
-            if not last_indicator_id:
-                continue
+    for indicator_name, latest_dict in latest_pre_2019_des_dict.items():
+        for latest_combo, combo_data in latest_dict.items():
+            latest_year = combo_data[0]
+            latest_value = combo_data[1]
+            if latest_year != "0":
+                latest_indicator_name = indicator_name + " - 2019 or LAY"
+                last_indicator_id = get_indicator_id(ids, latest_indicator_name)
+                if not last_indicator_id:
+                    continue
 
-            data[country_id][latest_year] = create_dict_if_dont_exist(data[country_id][latest_year], last_indicator_id)
+                create_dict_if_dont_exist(data[country_id][latest_year], last_indicator_id)
 
-            data[country_id][latest_year][last_indicator_id][latest_combo] = latest_value
-            debug(
-                f'pre_2019_de_names check: "{latest_indicator_name}" | {latest_year}" | {data[country_id][latest_year][last_indicator_id][latest_combo]}'
-            )
+                data[country_id][latest_year][last_indicator_id][latest_combo] = latest_value
+                debug(
+                    f'store_latest_data check: "{latest_indicator_name}" | {latest_year}" | {data[country_id][latest_year][last_indicator_id][latest_combo]}'
+                )
 
 
 def make_matched_values(csv_values_dict: dict, ids: MetadataIds):
@@ -544,14 +550,14 @@ def make_matched_values(csv_values_dict: dict, ids: MetadataIds):
 
     for country, country_data in csv_values_dict.items():
         latest_pre_2019_des_dict = {
-            CATA_HEALTHCARE_TOTAL_NAME: ["0", "", ""],
-            OOP_CHE_NAME: ["0", "", ""],
-            GGHED_GGE_NAME: ["0", "", ""],
-            CATA_QUINTILE_NAME: ["0", "", ""],
-            CATA_TOTAL_NAME: ["0", "", ""],
-            FURTHERIMPOV_CATA_NAME: ["0", "", ""],
-            IMPOV_CATA_NAME: ["0", "", ""],
-            UN_EUSILC_DENTAL_QUINTILE_NAME: ["0", "", ""]
+            CATA_HEALTHCARE_TOTAL_NAME: {},
+            OOP_CHE_NAME: {},
+            GGHED_GGE_NAME: {},
+            CATA_QUINTILE_NAME: {},
+            CATA_TOTAL_NAME: {},
+            FURTHERIMPOV_CATA_NAME: {},
+            IMPOV_CATA_NAME: {},
+            UN_EUSILC_DENTAL_QUINTILE_NAME: {}
         }
 
         country_id = ids.countries[country]
@@ -796,16 +802,16 @@ def write_indicator(col_indicator: str, col_combo: str, last_cell: Cell, matched
     count = 0
 
     for _, country_data in matched_values.items():
-        for __, indicators in country_data.items():
+        years = list(country_data.keys())
+        for year, indicators in country_data.items():
+            offset = years.index(year)
             for indicator_id, indicator_combos in indicators.items():
                 if indicator_id == col_indicator:
                     for combo_id, value in indicator_combos.items():
                         ids = combo_id.split('|') if '|' in combo_id else combo_id
                         if col_combo in ids or (col_combo == COC_DEFAULT_ID and combo_id == COC_TOTAL_ID):
-                            new_cell = last_cell.offset(row=1, column=0)
+                            new_cell = last_cell.offset(row=1 + offset, column=0)
                             new_cell.value = value
-
-                            last_cell = new_cell
 
                             count += 1
 
