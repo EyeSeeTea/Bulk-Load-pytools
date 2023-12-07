@@ -211,7 +211,15 @@ def fix_references_format(references: str):
     new_references = ""
 
     for reference in references.splitlines():
+        if not reference:
+            continue
+
         reference_partition = re.split(r': *(<.*?>) *', reference, 1)
+
+        if len(reference_partition) != 3:
+            print(f'Wrong format in References line: {reference}')
+            print('Skipping...')
+            continue
 
         if not reference_partition[-1].startswith('\"'):
             reference_partition[-1] = '"' + reference_partition[-1]
