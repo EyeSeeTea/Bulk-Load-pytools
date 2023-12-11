@@ -50,7 +50,7 @@ COUNTRY_DICT = {
     'NOR': 'Kingdom of Norway',
     'SPA': 'Kingdom of Spain',
     'SWE': 'Kingdom of Sweden',
-    'NET': 'Kingdom of the Netherlands',
+    'NLD': 'Kingdom of the Netherlands',
     'KGZ': 'Kyrgyz Republic',
     'MNE': 'Montenegro',
     'POR': 'Portuguese Republic',
@@ -314,6 +314,8 @@ def currency_converter(amount: str, country: str, year: str, figure: str):
         country = "IRE"
     elif country == "ROU":
         country = "ROM"
+    elif country == "NLD":
+        country = "NET"
 
     try:
         coefficient = CURRENCY_TABLE[
