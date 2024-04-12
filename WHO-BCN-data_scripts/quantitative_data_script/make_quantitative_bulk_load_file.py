@@ -1,3 +1,4 @@
+from copy import deepcopy
 import os
 import csv
 import sys
@@ -660,11 +661,11 @@ def store_transformation_de(indicator_name: str, indicator_id: str):
         OTHER_CHE = indicator_id
 
 
-def get_indicator_value(matched_values: dict, country_id: str, year: str, indicator_id: str, combo_id: str, default: str | None = None):
+def get_indicator_value(metadata_dict: dict, country_id: str, year: str, indicator_id: str, combo_id: str, default: str | None = None):
     """_summary_
 
     Args:
-        matched_values (dict): Dictionary with the values indexed by metadata id
+        metadata_dict (dict): Dictionary with the values indexed by metadata id
         country_id (str): Value country ID
         year (str): Value year
         indicator_id (str): Value data element ID
@@ -676,7 +677,7 @@ def get_indicator_value(matched_values: dict, country_id: str, year: str, indica
     """
 
     try:
-        return matched_values[country_id][year][indicator_id][combo_id]
+        return metadata_dict[country_id][year][indicator_id][combo_id]
     except KeyError:
         if default:
             return default
@@ -685,11 +686,11 @@ def get_indicator_value(matched_values: dict, country_id: str, year: str, indica
         return None
 
 
-def get_spending_share_indicator(matched_values: dict, ids: dict, de: str, name: str):
+def get_spending_share_indicator(metadata_dict: dict, ids: dict, de: str, name: str):
     """Tries to get the data element value and prints a warning if no value can be found
 
     Args:
-        matched_values (dict): Dictionary with the values indexed by metadata id
+        metadata_dict (dict): Dictionary with the values indexed by metadata id
         ids (dict): Dictionary with the requested data element country, year and combo
         de (str): Data element id
         name (str): Data element name
@@ -699,26 +700,28 @@ def get_spending_share_indicator(matched_values: dict, ids: dict, de: str, name:
     """
 
     try:
-        return float(matched_values[ids["country_id"]][ids["year"]][de][ids["combo_id"]])
+        return float(metadata_dict[ids["country_id"]][ids["year"]][de][ids["combo_id"]])
     except KeyError:
         print(f'WARNING: Data element "{name}" for OU {ids["country_id"]} - {ids["year"]} is missing')
         return None
 
 
-def make_transformations(matched_values: dict):
+def make_transformations(metadata_dict: dict):
     """Performs transformations for the 'Share of households with out-of-pocket payments for health care' and 
     'Other spending as a share of current spending on health'
 
     Args:
-        matched_values (dict): Dictionary with the values indexed by metadata id
+        metadata_dict (dict): Dictionary with the values indexed by metadata id
     """
+
+    new_metadata_dict = deepcopy(metadata_dict)
 
     households_ids = {
         SHARE_HH_WITH_OOP_TOTAL: SHARE_HH_NO_OOP_TOTAL,
         SHARE_HH_WITH_OOP_QUINTILE: SHARE_HH_NO_OOP_QUINTILE
     }
 
-    for country_id, country_data in matched_values.items():
+    for country_id, country_data in new_metadata_dict.items():
         for year, indicators in country_data.items():
             for indicator_id, indicator_combos in indicators.items():
                 if indicator_id in households_ids.keys():
@@ -726,52 +729,55 @@ def make_transformations(matched_values: dict):
 
                     without_id = households_ids[indicator_id]
                     if not bool(indicator_combos):
-                        indicator_combos = matched_values[country_id][year][without_id]
+                        indicator_combos = new_metadata_dict[country_id][year][without_id]
 
                     for combo_id, _ in indicator_combos.items():
-                        without_value = get_indicator_value(matched_values, country_id, year, without_id, combo_id)
+                        without_value = get_indicator_value(new_metadata_dict, country_id, year, without_id, combo_id)
 
                         if without_value:
-                            create_dict_if_dont_exist(matched_values[country_id][year][indicator_id], combo_id)
-                            matched_values[country_id][year][indicator_id][combo_id] = str(100 - float(without_value))
+                            create_dict_if_dont_exist(new_metadata_dict[country_id][year][indicator_id], combo_id)
+                            new_metadata_dict[country_id][year][indicator_id][combo_id] = str(
+                                100 - float(without_value))
                             debug(
-                                f"make_transformations calc: {country_id} - {year} - {indicator_id} - {matched_values[country_id][year][indicator_id][combo_id]}"
+                                f"make_transformations calc: {country_id} - {year} - {indicator_id} - {new_metadata_dict[country_id][year][indicator_id][combo_id]}"
                             )
 
             if any(ind in indicators.keys() for ind in [GGHED_CHE, VHI_CHE, OOP_CHE, OTHER_CHE]):
                 ids = {"country_id": country_id, "year": year, "combo_id": COC_DEFAULT_ID}
 
-                gghed_che_value = get_spending_share_indicator(matched_values, ids, GGHED_CHE, GGHED_CHE_NAME)
-                vhi_che_value = get_spending_share_indicator(matched_values, ids, VHI_CHE, VHI_CHE_NAME)
-                oop_che_value = get_spending_share_indicator(matched_values, ids, OOP_CHE, OOP_CHE_NAME)
+                gghed_che_value = get_spending_share_indicator(new_metadata_dict, ids, GGHED_CHE, GGHED_CHE_NAME)
+                vhi_che_value = get_spending_share_indicator(new_metadata_dict, ids, VHI_CHE, VHI_CHE_NAME)
+                oop_che_value = get_spending_share_indicator(new_metadata_dict, ids, OOP_CHE, OOP_CHE_NAME)
 
-                create_dict_if_dont_exist(matched_values[country_id][year], OTHER_CHE)
-                create_dict_if_dont_exist(matched_values[country_id][year][OTHER_CHE], COC_DEFAULT_ID)
+                create_dict_if_dont_exist(new_metadata_dict[country_id][year], OTHER_CHE)
+                create_dict_if_dont_exist(new_metadata_dict[country_id][year][OTHER_CHE], COC_DEFAULT_ID)
 
                 if gghed_che_value and vhi_che_value and oop_che_value:
                     debug(f"make_transformations: {country_id} - {year} - {OTHER_CHE}")
-                    matched_values[country_id][year][OTHER_CHE][COC_DEFAULT_ID] = str(
+                    new_metadata_dict[country_id][year][OTHER_CHE][COC_DEFAULT_ID] = str(
                         100-(gghed_che_value + vhi_che_value + oop_che_value)
                     )
                     debug(
-                        f"make_transformations calc: {country_id} - {year} - {OTHER_CHE} - {matched_values[country_id][year][OTHER_CHE][COC_DEFAULT_ID]}"
+                        f"make_transformations calc: {country_id} - {year} - {OTHER_CHE} - {new_metadata_dict[country_id][year][OTHER_CHE][COC_DEFAULT_ID]}"
                     )
                 else:
                     print(
                         f'WARNING: Data element "{OTHER_CHE_NAME}" for OU {country_id} - {year} is missing values for transformation'
                     )
-                    matched_values[country_id][year][OTHER_CHE][COC_DEFAULT_ID] = ""
+                    new_metadata_dict[country_id][year][OTHER_CHE][COC_DEFAULT_ID] = ""
+
+        return new_metadata_dict
 
 
-def write_org_unit(last_cell: Cell, matched_values: dict):
+def write_org_unit(last_cell: Cell, metadata_dict: dict):
     """Writes the countries in the CSV data to the bulk load file
 
     Args:
         last_cell (Cell): Previous cell of the column
-        matched_values (dict): Dictionary with the values indexed by metadata id
+        metadata_dict (dict): Dictionary with the values indexed by metadata id
     """
 
-    for country_id, country_data in matched_values.items():
+    for country_id, country_data in metadata_dict.items():
         for _ in country_data:
             new_cell = last_cell.offset(row=1, column=0)
             new_cell.value = f'=_{country_id}'
@@ -779,15 +785,15 @@ def write_org_unit(last_cell: Cell, matched_values: dict):
             last_cell = new_cell
 
 
-def write_years(last_cell: Cell, matched_values: dict):
+def write_years(last_cell: Cell, metadata_dict: dict):
     """Writes the years in the CSV data to the bulk load file
 
     Args:
         last_cell (Cell): Previous cell of the column
-        matched_values (dict): Dictionary with the values indexed by metadata id
+        metadata_dict (dict): Dictionary with the values indexed by metadata id
     """
 
-    for _, country_data in matched_values.items():
+    for _, country_data in metadata_dict.items():
         for year in country_data:
             new_cell = last_cell.offset(row=1, column=0)
             new_cell.value = year
@@ -795,14 +801,14 @@ def write_years(last_cell: Cell, matched_values: dict):
             last_cell = new_cell
 
 
-def write_indicator(col_indicator: str, col_combo: str, last_cell: Cell, matched_values: dict):
+def write_indicator(col_indicator: str, col_combo: str, last_cell: Cell, metadata_dict: dict):
     """Writes the data elements in the CSV data to the bulk load file
 
     Args:
         col_indicator (str): Id of the data element
         col_combo (str): Id of the data elements combo
         last_cell (Cell): Previous cell of the column
-        matched_values (dict): Dictionary with the values indexed by metadata id
+        metadata_dict (dict): Dictionary with the values indexed by metadata id
 
     Returns:
         (int): Number of data elements added to the bulk load file
@@ -810,7 +816,7 @@ def write_indicator(col_indicator: str, col_combo: str, last_cell: Cell, matched
 
     count = 0
 
-    for _, country_data in matched_values.items():
+    for _, country_data in metadata_dict.items():
         years = list(country_data.keys())
         for year, indicators in country_data.items():
             offset = years.index(year)
@@ -827,12 +833,12 @@ def write_indicator(col_indicator: str, col_combo: str, last_cell: Cell, matched
     return count
 
 
-def write_values(workbook: Workbook, matched_values: dict):
+def write_values(workbook: Workbook, metadata_dict: dict):
     """Writes the CSV data to a new bulk load file using workbook as a template
 
     Args:
         workbook (Workbook): XLSX file with the bulk load template
-        matched_values (dict): Dictionary with the values indexed by metadata id
+        metadata_dict (dict): Dictionary with the values indexed by metadata id
 
     Returns:
         (int): Number of data elements added to the bulk load file
@@ -845,10 +851,10 @@ def write_values(workbook: Workbook, matched_values: dict):
     for index, col in enumerate(sheet.iter_cols(min_row=4)):
         if index == 0:
             last_cell = col[-1]
-            write_org_unit(last_cell, matched_values)
+            write_org_unit(last_cell, metadata_dict)
         if index == 1:
             last_cell = col[-1]
-            write_years(last_cell, matched_values)
+            write_years(last_cell, metadata_dict)
         if index == 2:
             pass
         if index > 2:
@@ -858,7 +864,7 @@ def write_values(workbook: Workbook, matched_values: dict):
             last_cell = col[-1]
 
             count += write_indicator(col_indicator, col_combo,
-                                     last_cell, matched_values)
+                                     last_cell, metadata_dict)
 
     workbook.save(OUT_FILENAME)
 
@@ -888,11 +894,11 @@ def dump_json_var(var: any):
     return json.dumps(var, indent=2)
 
 
-def get_matched_values_len(matched_values: dict):
+def get_metadata_dict_len(metadata_dict: dict):
     """Gets the number of matched values from the CSV
 
     Args:
-        matched_values (dict): Dictionary with the values indexed by metadata id
+        metadata_dict (dict): Dictionary with the values indexed by metadata id
 
     Returns:
         (int): Number of matched values
@@ -900,7 +906,7 @@ def get_matched_values_len(matched_values: dict):
 
     lenght = 0
 
-    for years in matched_values.values():
+    for years in metadata_dict.values():
         for indicators in years.values():
             for combos in indicators.values():
                 lenght += len(combos)
@@ -1000,16 +1006,15 @@ def main():
     debug(f'countries ids:\n len: {len(ids.countries)}\n values:\n', dump_json_var(ids.countries))
     debug(f'combos ids:\n len: {len(ids.combos)}\n values:\n', dump_json_var(ids.combos))
 
-    matched_values = make_matched_values(csv_values_dict, ids)
-    make_transformations(matched_values)
+    metadata_dict = make_matched_values(csv_values_dict, ids)
+    metadata_dict = make_transformations(metadata_dict)
 
-    csv_count = get_matched_values_len(matched_values)
+    csv_count = get_metadata_dict_len(metadata_dict)
 
-    debug(f'matched_values count: {csv_count}\n')
-    debug('matched_values:\n', dump_json_var(matched_values))
+    debug(f'metadata_dict count: {csv_count}\n')
+    debug('metadata_dict:\n', dump_json_var(metadata_dict))
 
-
-    excel_count = write_values(wb, matched_values)
+    excel_count = write_values(wb, metadata_dict)
     debug(f'write_values count: {excel_count}\n')
 
     print(f'Processed {csv_count} entries from CSV file, written {excel_count} values to EXCEL')
