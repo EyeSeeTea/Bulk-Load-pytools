@@ -297,6 +297,11 @@ def currency_converter(amount: str, country: str, year: str, figure: str):
         adjusted_amount (str): New value with currency conversion applied
     """
 
+    currency_table = pd.read_csv(
+        "https://docs.google.com/spreadsheets/d/1lEHQ9i-LO7gl0RWaJgYcfOJHjPefVXJbhgJ0Gn3iUPQ/export?format=csv&gid=56805701",
+        decimal=","
+    )
+
     currency_figures = ["F5", "F9", "F10a", "F10b", "F10c", "F10d", "F10e", "F10f", "F26"]
 
     debug(f'currency_converter amount: {amount} | country_code: {country} | year: {year} | figure: {figure}')
@@ -305,7 +310,7 @@ def currency_converter(amount: str, country: str, year: str, figure: str):
         debug('currency_converter figure not in list')
         return amount
 
-    # NOTE: Temporal fixes until the CURRENCY_TABLE gets fixed
+    # NOTE: Temporal fixes until the currency_table gets fixed
     if country == "GRC":
         country = "GRE"
     elif country == "DNK":
@@ -318,14 +323,14 @@ def currency_converter(amount: str, country: str, year: str, figure: str):
         country = "NET"
 
     try:
-        coefficient = CURRENCY_TABLE[
-            (CURRENCY_TABLE['code'] == country)
+        coefficient = currency_table[
+            (currency_table['code'] == country)
         ][year].values[0]
     except KeyError:
         # If no coefficient available for year, get the closest year to present
-        last_year = next(reversed(CURRENCY_TABLE.keys()))
-        coefficient = CURRENCY_TABLE[
-            (CURRENCY_TABLE['code'] == country)
+        last_year = next(reversed(currency_table.keys()))
+        coefficient = currency_table[
+            (currency_table['code'] == country)
         ][last_year].values[0]
     except Exception:
         traceback.print_exc()
@@ -338,7 +343,7 @@ def currency_converter(amount: str, country: str, year: str, figure: str):
     return str(adjusting_for_inflation)
 
 
-def get_csv_indicator_value(value: str, real_value: str):
+def get_csv_indicator_value(value: str, real_value: str, real_flag: bool = False):
     """Checks if real_value exists and its not "NA" if --real_value flag is set
 
     Args:
@@ -349,7 +354,7 @@ def get_csv_indicator_value(value: str, real_value: str):
         real_value (str): Appropriate value based on --real_value flag
     """
 
-    if REAL_VALUE:
+    if real_flag:
         return real_value if real_value != "NA" else value
 
     return value
@@ -367,11 +372,13 @@ def create_dict_if_dont_exist(dictionary: dict, key: str):
         dictionary[key] = {}
 
 
-def extract_values_from_csv(filename: str):
-    """Given a CSV file name creates a dictionary of the CSV file data
+def extract_values_from_csv(filename: str, real_flag: bool = False, currrency_flag: bool = False):
+    """Given a CSV file name, creates a dictionary of the CSV file data
 
     Args:
         filename (str): CSV file name
+        real_flag (bool): Flag for using the real values
+        currency_flag (bool): Flag to apply currency converter
 
     Returns:
         values (dict): Dictionary with the CSV file data
@@ -388,11 +395,11 @@ def extract_values_from_csv(filename: str):
                 year = row['year']
                 quintile = row['quintile']
                 service = row['service']
-                if CURRENCY and indicator_name != POVERTY_LINE_OLD_NAME:
+                if currrency_flag and indicator_name != POVERTY_LINE_OLD_NAME:
                     figure = row['figure_id']
                     value = currency_converter(row['value'], country, year, figure)
                 else:
-                    value = get_csv_indicator_value(row['value'], row['real_value'])
+                    value = get_csv_indicator_value(row['value'], row['real_value'], real_flag)
 
                 check_for_empty_csv_fields(
                     row=row,
@@ -938,11 +945,8 @@ def get_template_path(parser: ArgumentParser, xlsx_template: str):
 
 OUT_FILENAME = ''
 DEFAULT_TEMPLATE = 'Quantitative_Data_UHCPW_Template.xlsx'
-REAL_VALUE = False
 DEBUG = False
 LOG_FILE = 'log.json'
-CURRENCY = False
-CURRENCY_TABLE = None
 
 
 def main():
@@ -966,11 +970,9 @@ def main():
     if not filepath_exists(args.indicators_csv):
         parser.error(f'The source file: {args.indicators_csv} doesn\'t exist')
 
-    global OUT_FILENAME, REAL_VALUE, DEBUG, CURRENCY, CURRENCY_TABLE
+    global OUT_FILENAME, DEBUG
     OUT_FILENAME = f'{args.indicators_csv.split(".csv")[0]}.xlsx'
-    REAL_VALUE = args.real_value
     DEBUG = args.debug
-    CURRENCY = args.currency
 
     if DEBUG:
         f = open(LOG_FILE, 'w', encoding="utf-8")
@@ -982,13 +984,6 @@ def main():
     debug('Template:', args.xlsx_template)
     debug('Output file:', OUT_FILENAME)
 
-    if CURRENCY:
-        CURRENCY_TABLE = pd.read_csv(
-            "https://docs.google.com/spreadsheets/d/1lEHQ9i-LO7gl0RWaJgYcfOJHjPefVXJbhgJ0Gn3iUPQ/export?format=csv&gid=56805701",
-            decimal=","
-        )
-        debug('Currency table:', CURRENCY_TABLE)
-
     try:
         wb = openpyxl.load_workbook(args.xlsx_template)
     except Exception as e:
@@ -996,7 +991,7 @@ def main():
         traceback.print_exc()
         sys.exit(1)
 
-    csv_values_dict = extract_values_from_csv(args.indicators_csv)
+    csv_values_dict = extract_values_from_csv(args.indicators_csv, args.real_value, args.currency)
     debug('csv_values_dict:\n ', dump_json_var(csv_values_dict))
 
     ids = get_metadata_ids(wb)

@@ -47,6 +47,76 @@ class TestExtractValuesFromCSV(unittest.TestCase):
 
         self.assertEqual(result, expected_result)
 
+    @patch('builtins.open', new_callable=mock_open, read_data='\n'.join(csv_data))
+    def test_extract_values_from_csv_real(self, mock_open):
+        from make_quantitative_bulk_load_file import extract_values_from_csv
+
+        result = extract_values_from_csv('fake_file.csv', real_flag=True)
+
+        print("result: ", result)
+
+        expected_result = {
+            "Kingdom of Spain": {
+                "2006": {
+                    "Mean monthly subsistence expenditure line (cost of meeting basic needs)": {
+                        "default": "6955.25"
+                    },
+                    "Percent below subsistence expenditure line (basic needs line)": {
+                        "default": "0.590924442657176"
+                    },
+                    "Mean monthly capacity to pay for health care": {
+                        "default": "29470.85"
+                    }
+                },
+                "2007": {
+                    "Annual out-of-pocket payments for health care per person (by consumption quintile)": {
+                        "Poorest": "102.01",
+                        "2nd": "222.64",
+                        "3rd": "318.99",
+                        "4th": "498.81",
+                        "Richest": "1033.58"
+                    }
+                }
+            }
+        }
+
+        self.assertEqual(result, expected_result)
+
+    @patch('builtins.open', new_callable=mock_open, read_data='\n'.join(csv_data))
+    def test_extract_values_from_csv_currency(self, mock_open):
+        from make_quantitative_bulk_load_file import extract_values_from_csv
+
+        result = extract_values_from_csv('fake_file.csv', currrency_flag=True)
+
+        print("result: ", result)
+
+        expected_result = {
+            "Kingdom of Spain": {
+                "2006": {
+                    "Mean monthly subsistence expenditure line (cost of meeting basic needs)": {
+                        "default": "6955.25"
+                    },
+                    "Percent below subsistence expenditure line (basic needs line)": {
+                        "default": "0.590924442657176"
+                    },
+                    "Mean monthly capacity to pay for health care": {
+                        "default": "29470.85"
+                    }
+                },
+                "2007": {
+                    "Annual out-of-pocket payments for health care per person (by consumption quintile)": {
+                        "Poorest": "102.01",
+                        "2nd": "222.64",
+                        "3rd": "318.99",
+                        "4th": "498.81",
+                        "Richest": "1033.58"
+                    }
+                }
+            }
+        }
+
+        self.assertEqual(result, expected_result)
+
 
 class TestcreateDictIfDontExist(unittest.TestCase):
     def test_create_dict_if_dont_exist_existing_key(self):
