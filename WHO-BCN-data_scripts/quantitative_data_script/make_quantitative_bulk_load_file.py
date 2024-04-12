@@ -462,8 +462,8 @@ def store_transformation_de(indicator_name: str, indicator_id: str):
 
 
 def get_indicator_value(metadata_dict: dict, country_id: str, year: str, indicator_id: str, combo_id: str, default: str | None = None):
-    """_summary_
-
+    """Get the value of an indicator from the metadata dictionary.
+    
     Args:
         metadata_dict (dict): Dictionary with the values indexed by metadata id
         country_id (str): Value country ID
@@ -636,7 +636,7 @@ def write_indicator(col_indicator: str, col_combo: str, last_cell: Cell, metadat
     return count
 
 
-def write_values(workbook: Workbook, metadata_dict: dict):
+def write_values(workbook: Workbook, metadata_dict: dict, out_filename: str):
     """Writes the CSV data to a new bulk load file using workbook as a template
 
     Args:
@@ -669,7 +669,7 @@ def write_values(workbook: Workbook, metadata_dict: dict):
             count += write_indicator(col_indicator, col_combo,
                                      last_cell, metadata_dict)
 
-    workbook.save(OUT_FILENAME)
+    workbook.save(out_filename)
 
     debug(f'excel count: {count}')
     return count
@@ -740,20 +740,14 @@ def get_template_path(parser: ArgumentParser, xlsx_template: str):
     Returns:
         (str): Path to the template
     """
-
-    if not xlsx_template:
-        if filepath_exists(DEFAULT_TEMPLATE):
-            xlsx_template = DEFAULT_TEMPLATE
-        else:
-            parser.error(f'The default template: {DEFAULT_TEMPLATE} doesn\'t exist')
-    elif not filepath_exists(xlsx_template):
+    if not filepath_exists(xlsx_template):
         parser.error(f'The template: {xlsx_template} doesn\'t exist')
 
     return xlsx_template
 
 
 OUT_FILENAME = ''
-DEFAULT_TEMPLATE = 'Quantitative_Data_UHCPW_Template.xlsx'
+
 DEBUG = False
 LOG_FILE = 'log.json'
 
@@ -765,7 +759,7 @@ def main():
                                      in the same folder as the script.\
                                      Outputs to a XLSX file with same name as the source CSV one.')
     parser.add_argument('indicators_csv', type=str, help='Source CSV file')
-    parser.add_argument('-x', '--xlsx_template', type=str,
+    parser.add_argument('-x', '--xlsx_template', type=str, default='Quantitative_Data_UHCPW_Template.xlsx',
                         help='Bulk Load Quantitative XLSX template file path, if empty tries to open "Quantitative_Data_UHCPW_Template.xlsx"')
     adjusted_values_args = parser.add_mutually_exclusive_group()
     adjusted_values_args.add_argument('-r', '--real_value', action='store_true',
@@ -779,8 +773,8 @@ def main():
     if not filepath_exists(args.indicators_csv):
         parser.error(f'The source file: {args.indicators_csv} doesn\'t exist')
 
-    global OUT_FILENAME, DEBUG
-    OUT_FILENAME = f'{args.indicators_csv.split(".csv")[0]}.xlsx'
+    global DEBUG
+    out_filename = f'{args.indicators_csv.split(".csv")[0]}.xlsx'
     DEBUG = args.debug
 
     if DEBUG:
@@ -791,7 +785,7 @@ def main():
 
     debug('Source file:', args.indicators_csv)
     debug('Template:', args.xlsx_template)
-    debug('Output file:', OUT_FILENAME)
+    debug('Output file:', out_filename)
 
     try:
         wb = openpyxl.load_workbook(args.xlsx_template)
@@ -817,7 +811,7 @@ def main():
     debug(f'metadata_dict count: {csv_count}\n')
     debug('metadata_dict:\n', dump_json_var(metadata_dict))
 
-    excel_count = write_values(wb, metadata_dict)
+    excel_count = write_values(wb, metadata_dict, out_filename)
     debug(f'write_values count: {excel_count}\n')
 
     print(f'Processed {csv_count} entries from CSV file, written {excel_count} values to EXCEL')
