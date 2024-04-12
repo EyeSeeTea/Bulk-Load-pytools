@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import patch, mock_open
-from make_quantitative_bulk_load_file import *
+from data import NAMES_DICT
+from make_quantitative_bulk_load_file import MetadataIds, create_dict_if_dont_exist, get_indicator_id, check_mean_monthly_indicator, make_matched_values
 
 
 class TestExtractValuesFromCSV(unittest.TestCase):
@@ -53,8 +54,6 @@ class TestExtractValuesFromCSV(unittest.TestCase):
 
         result = extract_values_from_csv('fake_file.csv', real_flag=True)
 
-        print("result: ", result)
-
         expected_result = {
             "Kingdom of Spain": {
                 "2006": {
@@ -87,8 +86,6 @@ class TestExtractValuesFromCSV(unittest.TestCase):
         from make_quantitative_bulk_load_file import extract_values_from_csv
 
         result = extract_values_from_csv('fake_file.csv', currrency_flag=True)
-
-        print("result: ", result)
 
         expected_result = {
             "Kingdom of Spain": {
@@ -149,7 +146,7 @@ class TestGetIndicator(unittest.TestCase):
 
 class TestTestCheckMeanMonthlyIndicator(unittest.TestCase):
     def test_check_mean_monthly_indicator(self):
-        self.assertEqual(check_mean_monthly_indicator(CTP_MONTHLY_NAME), True)
+        self.assertEqual(check_mean_monthly_indicator(NAMES_DICT["CTP_MONTHLY_NAME"]), True)
 
         self.assertEqual(check_mean_monthly_indicator("OTHER_NAME"), False)
 
