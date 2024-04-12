@@ -3,6 +3,49 @@ from unittest.mock import patch, mock_open
 from make_quantitative_bulk_load_file import *
 
 
+class TestExtractValuesFromCSV(unittest.TestCase):
+    csv_data = ['"indicator_id","indicator_name","country","year","quintile","service","value","real_value","currency","conversion_year","category","value_type","table_id","figure_id"',
+                '"sel_annual","Mean annual subsistence expenditure line","SPA","2006","Total",NA,5789.83088716205,6955.25,"EUR","2020","Household budget survey","number","T1","F26"',
+                '"poverty_line","Percent below subsistence expenditure line","SPA","2006","Total",NA,0.590924442657176,NA,"EUR","2020","Household budget survey","percentage","T1","F26"',
+                '"ctp_annual","Mean annual capacity to pay","SPA","2006","Total",NA,24532.7152806292,29470.85,"EUR","2020","Household budget survey","number","T1","F26"',
+                '"annual_oop_pc_quintile","Mean annual per capita OOP (by quintile)","SPA","2007","Poorest","NA","87.2864355545332","102.01","EUR","2020","Health spending","number","T2 Table 1","F5"',
+                '"annual_oop_pc_quintile","Mean annual per capita OOP (by quintile)","SPA","2007","2nd","NA","190.509515508374","222.64","EUR","2020","Health spending","number","T2 Table 1","F5"',
+                '"annual_oop_pc_quintile","Mean annual per capita OOP (by quintile)","SPA","2007","3rd","NA","272.954298750225","318.99","EUR","2020","Health spending","number","T2 Table 1","F5"',
+                '"annual_oop_pc_quintile","Mean annual per capita OOP (by quintile)","SPA","2007","4th","NA","426.813408546795","498.81","EUR","2020","Health spending","number","T2 Table 1","F5"',
+                '"annual_oop_pc_quintile","Mean annual per capita OOP (by quintile)","SPA","2007","Richest","NA","884.403235165156","1033.58","EUR","2020","Health spending","number","T2 Table 1","F5"']
+
+    @patch('builtins.open', new_callable=mock_open, read_data='\n'.join(csv_data))
+    def test_extract_values_from_csv(self, mock_open):
+
+        from make_quantitative_bulk_load_file import extract_values_from_csv
+        result = extract_values_from_csv('fake_file.csv')
+
+        expected_result = {'Kingdom of Spain':
+                           {
+                               '2006': {
+                                   'Mean monthly subsistence expenditure line (cost of meeting basic needs)': {
+                                       'default': '5789.83088716205'
+                                   },
+                                   'Percent below subsistence expenditure line (basic needs line)': {
+                                       'default': '0.590924442657176'
+                                   },
+                                   'Mean monthly capacity to pay for health care': {
+                                       'default': '24532.7152806292'
+                                   }
+                               },
+                               '2007': {
+                                   "Annual out-of-pocket payments for health care per person (by consumption quintile)": {
+                                       "Poorest": "87.2864355545332",
+                                       "2nd": "190.509515508374",
+                                       "3rd": "272.954298750225",
+                                       "4th": "426.813408546795",
+                                       "Richest": "884.403235165156"
+                                   }
+                               },
+                           },
+                           }
+
+        self.assertEqual(result, expected_result)
 
 
 class TestcreateDictIfDontExist(unittest.TestCase):
