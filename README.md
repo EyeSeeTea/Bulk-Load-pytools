@@ -80,8 +80,8 @@ python3 make_quantitative_bulk_load_file.py SPA_fp_indicators.csv -d
 ## make_qualitative_bulk_load_file.py
 
 This script processes DOCX files into "Bulk Load" XLSX files.
-The script needs a Bulk Load template. It can either be supplied with the `--xlsx_template` argument or by placing a template named "Quantitative*Data_UHCPW_Template.xlsx" in the same folder as the script.
-The output file will be a XLSX file named *\<COUNTRY>\_\<YEAR>\_Qualitative*Data.xlsx*.
+The script needs a Bulk Load template. It can either be supplied with the `--xlsx_template` argument or by placing a template named "Qualitative_Data_UHCPW_Template.xlsx" in the same folder as the script.
+The output file will be a XLSX file named *\<COUNTRY>\_\<YEAR>\_Qualitative_Data.xlsx*.
 
 ### Usage
 
@@ -97,7 +97,7 @@ python3 make_qualitative_bulk_load_file.py [-h] [-x XLSX_TEMPLATE] [-d] [-c COVE
 
 `-h`, `--help`: Show the help message and exit.
 
-`-x XLSX_TEMPLATE`, `--xlsx_template XLSX_TEMPLATE`: The Bulk Load Quantitative XLSX template file path. If empty, the script will try to open "Quantitative_Data_UHCPW_Template.xlsx".
+`-x XLSX_TEMPLATE`, `--xlsx_template XLSX_TEMPLATE`: The Bulk Load Qualitative XLSX template file path. If empty, the script will try to open "Qualitative_Data_UHCPW_Template.xlsx".
 
 `-d`, `--debug`: Print debug logs into a `log.json` file.
 
