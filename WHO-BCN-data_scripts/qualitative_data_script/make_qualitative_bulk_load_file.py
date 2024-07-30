@@ -254,6 +254,20 @@ def check_date_format(regex: str, value: str):
         return False
 
 
+def check_date_updated_format(key: str, value: str):
+    if not check_date_format(r'^\d{4}-\d{2}-\d{2}$', value):
+        if check_date_format(r'^\d{4}[\/ _-]\d{2}[\/ _-]\d{2}$', value):
+            print(f'Wrong date format in {key}: {value}. Changing to YYYY-MM-DD format.')
+            for char in ["/", "_", " "]:
+                if char in value:
+                    value = value.replace(char, "-")
+        else:
+            error(f'Invalid date format in {key}: {value}')
+            exit(1)
+
+    return value
+
+
 def extract_longtext_tables(document: Document):
     """
     Extracts tables from the source DOCX file and returns them as a list of dictionaries.
@@ -275,7 +289,8 @@ def extract_longtext_tables(document: Document):
         for row in table.rows:
             key = row.cells[0].text.rstrip()
 
-            if not INCLUDE_INTERNAL and key.startswith(INTERNAL_TEXT):
+            # TODO: Add internal checkbox fields
+            if key.startswith(INTERNAL_TEXT):
                 continue
 
             value = row.cells[1].text.rstrip()
@@ -284,18 +299,8 @@ def extract_longtext_tables(document: Document):
                 value = fix_references_format(value)
 
             if key == "Date updated (YYYY-MM-DD)":
-                if check_date_format(r'^\d{4}-\d{2}-\d{2}$', value):
-                    table_data[key] = value
-
-                if check_date_format(r'^\d{4}[\/ _-]\d{2}[\/ _-]\d{2}$', value):
-                    print(f'Wrong date format in {key}: {value}. Changing to YYYY-MM-DD format.')
-                    for char in ["/", "_", " "]:
-                        if char in value:
-                            value = value.replace(char, "-")
-                else:
-                    error(f'Invalid date format in {key}: {value}')
-                    exit(1)
-
+                value = check_date_updated_format(key, value)
+                table_data[key] = value
 
             if key and value:
                 table_data[key] = value
@@ -411,7 +416,6 @@ def extract_user_charges_by_type_table(document: Document):
     return text_table_data
 
 
-
 def add_to_coverage_tables_data(coverage_tables_data: dict, new_data: dict):
     if new_data:
         for year, values in new_data.items():
@@ -501,18 +505,15 @@ def main():
                         help='Print debug logs into a "log.json" file.')
     parser.add_argument('-c', '--coverage_max', type=int,
                         help='Number of coverage policy table entries per year, by default 10, must be positive.')
-    parser.add_argument('-i', '--internal', action='store_true',
-                        help='Include internal fields in the output file.')
     args = parser.parse_args()
 
     if not filepath_exists(args.docx_filename):
         parser.error(f'The source file: {args.docx_filename} doesn\'t exist')
 
-    global OUT_FILENAME, DEFAULT_TEMPLATE, DEBUG, LOG_FILE, COUNTRY, YEAR, INTERNAL_TEXT, INCLUDE_INTERNAL, COVERAGE_TABLE_MAX, BOX_CHARS
+    global OUT_FILENAME, DEFAULT_TEMPLATE, DEBUG, LOG_FILE, COUNTRY, YEAR, INTERNAL_TEXT, COVERAGE_TABLE_MAX, BOX_CHARS
     INTERNAL_TEXT = 'Internal'
     DEFAULT_TEMPLATE = 'Qualitative_Data_UHCPW_Template.xlsx'
     DEBUG = args.debug
-    INCLUDE_INTERNAL = args.internal
 
     if DEBUG:
         LOG_FILE = "log.json"
