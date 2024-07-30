@@ -1,4 +1,5 @@
 import json
+import re
 import os
 import re
 import sys
@@ -236,6 +237,23 @@ def fix_references_format(references: str):
     return new_references
 
 
+def check_date_format(regex: str, value: str):
+    """
+    Check if the given value is in the format 'YYYY-MM-DD'.
+
+    Args:
+        value (str): The value to be checked.
+
+    Returns:
+        bool: True if the value is in the correct format, False otherwise.
+    """
+
+    if re.match(regex, value):
+        return True
+    else:
+        return False
+
+
 def extract_longtext_tables(document: Document):
     """
     Extracts tables from the source DOCX file and returns them as a list of dictionaries.
@@ -264,6 +282,20 @@ def extract_longtext_tables(document: Document):
 
             if key == "References":
                 value = fix_references_format(value)
+
+            if key == "Date updated (YYYY-MM-DD)":
+                if check_date_format(r'^\d{4}-\d{2}-\d{2}$', value):
+                    table_data[key] = value
+
+                if check_date_format(r'^\d{4}[\/ _-]\d{2}[\/ _-]\d{2}$', value):
+                    print(f'Wrong date format in {key}: {value}. Changing to YYYY-MM-DD format.')
+                    for char in ["/", "_", " "]:
+                        if char in value:
+                            value = value.replace(char, "-")
+                else:
+                    error(f'Invalid date format in {key}: {value}')
+                    exit(1)
+
 
             if key and value:
                 table_data[key] = value
