@@ -103,6 +103,8 @@ python3 make_qualitative_bulk_load_file.py [-h] [-x XLSX_TEMPLATE] [-d] [-c COVE
 
 `-c`, `--coverage_max`: Number of coverage policy table entries per year, by default 10, must be positive.
 
+`-i`, `--internal`: Include internal fields in the output file.
+
 ### Examples
 
 Simple use:
