@@ -12,7 +12,7 @@ from openpyxl.workbook import Workbook
 from openpyxl.cell import Cell, MergedCell
 
 
-Metadata_ids = namedtuple("Metadata_ids", "sections, data_elements, countries, combos")
+Metadata_ids = namedtuple("Metadata_ids", "sections, data_elements, cat_data_elements, countries, combos")
 
 
 def get_country_id(country: str, countries_ids: dict):
@@ -40,6 +40,7 @@ def get_data_element_id(de: str, data_elements_ids: dict):
 def get_metadata_ids(workbook: Workbook):
     sections_id_dict = {}
     data_elements_id_dict = {}
+    cat_data_elements_id_dict = {}
     countries_id_dict = {}
     combos_id_dict = {}
     sheet = workbook['Metadata']
@@ -48,7 +49,7 @@ def get_metadata_ids(workbook: Workbook):
         identifier = row[0]
         type_col = row[1]
         name = cleanup_string(row[2])
-
+        value_type = row[3]
         Option_set = row[4] if row[4] else False
 
         if type_col == 'sections':
@@ -57,13 +58,16 @@ def get_metadata_ids(workbook: Workbook):
         if type_col == 'categoryOptionCombos':
             combos_id_dict[name] = identifier
 
-        if type_col == 'dataElements' and not Option_set:
-            data_elements_id_dict[name] = identifier
+        if type_col == 'dataElements':
+            if Option_set or value_type == "TRUE_ONLY":
+                cat_data_elements_id_dict[name] = identifier
+            else:
+                data_elements_id_dict[name] = identifier
 
         if type_col == 'organisationUnit':
             countries_id_dict[name] = identifier
 
-    return Metadata_ids(sections_id_dict, data_elements_id_dict, countries_id_dict, combos_id_dict)
+    return Metadata_ids(sections_id_dict, data_elements_id_dict, cat_data_elements_id_dict, countries_id_dict, combos_id_dict)
 
 
 def make_matched_values(tables_data: list[dict], coverage_tables_data: dict, ids: Metadata_ids):
@@ -253,7 +257,7 @@ def extract_longtext_tables(document: Document):
         for row in table.rows:
             key = row.cells[0].text.rstrip()
 
-            if key.startswith(INTERNAL):
+            if not INCLUDE_INTERNAL and key.startswith(INTERNAL_TEXT):
                 continue
 
             value = row.cells[1].text.rstrip()
@@ -325,6 +329,36 @@ def cleanup_string(text: str):
     return ' '.join(str(text).split())
 
 
+def get_user_charges_by_type_text(table: table, header_list: list, table_data: dict):
+    type_of_heath_care_dict = {
+        "Primary care visits (text)": "(Primary Care)",
+        "Outpatient specialist visits (text)": "(Specialist Visits)",
+        "Emergency care (text)": "(Emergency Visits)",
+        "Outpatient prescribed medicines (text)": "(Outpatient Medicines)",
+        "Medical products (text)": "(Medical Products)",
+        "Diagnostic tests (text)": "(Diagnostics Tests)",
+        "Dental care visits (text)": "(Dental Visits)",
+        "Dental care treatment (text)": "(Dental Care Treatment)",
+        "Inpatient care (text)": "(Inpatient Care)",
+        "Inpatient medicines (text)": "(Inpatient Medicines)",
+    }
+
+    for row_id, row in enumerate(table.rows):
+        if row_id == 0:
+            continue
+        for cell_id, cell in enumerate(row.cells):
+            if cell_id == 0:
+                type_of_heath_care = type_of_heath_care_dict.get(cleanup_string(cell.text), None)
+                if not type_of_heath_care:
+                    error(f'Unknown type of health care: {cell.text}')
+                    break
+                continue
+
+            data_element = f'{header_list[cell_id]} {type_of_heath_care}'
+            table_data[data_element] = cell.text.strip()
+    return table_data
+
+
 def extract_user_charges_by_type_table(document: Document):
     header_list = [
         "Type of health care",
@@ -335,30 +369,17 @@ def extract_user_charges_by_type_table(document: Document):
         "Cap on user charges",
     ]
 
-    type_of_heath_care_dict = {
-        "Outpatient primary care visits (text)": "(Primary Care)",
-        "Outpatient specialist visits (text)": "(Specialist Visits)",
-        "Outpatient emergency visits (text)": "(Emergency Visits)",
-        "Outpatient prescribed medicines (text)": "(Outpatient Medicines)",
-        "Medical products (text)": "(Medical Products)",
-        "Diagnostic tests (cat)": "(Diagnostics Tests)",
-        "Dental care visits (text)": "(Dental Visits)",
-        "Dental care treatment (text)": "(Dental Care Treatment)",
-        "Inpatient care (text)": "(Inpatient Care)",
-        "Inpatient medicines (text)": "(Inpatient Medicines)",
-    }
-
-    table_data = {}
+    text_table_data = {}
 
     for table in document.tables:
 
         if table_is_target(table, header_list):
-            for row_id, row in enumerate(table.rows):
+            text_table_data = get_user_charges_by_type_text(table, header_list, text_table_data)
                 if row_id == 0:
-                    continue
-                for cell_id, cell in enumerate(row.cells):
+
+    return text_table_data
                     if cell_id == 0:
-                        type_of_heath_care = type_of_heath_care_dict[cleanup_string(cell.text)]
+                        type_of_heath_care = type_of_heath_care_dict.get(cleanup_string(cell.text), None)
                         continue
                     data_element = f'{header_list[cell_id]} {type_of_heath_care}'
                     table_data[data_element] = cell.text.strip()
@@ -373,45 +394,20 @@ def add_to_coverage_tables_data(coverage_tables_data: dict, new_data: dict):
     return dict(sorted(coverage_tables_data.items(), reverse=True))
 
 
-def extract_charges_in_coverage_upto19_table(document: Document):
-    changes_in_coverage_2019_header = {
-        "Year": "",
-        "Month": "",
-        "Coverage policy area": "Area of change in coverage policy pre2019",
-        "Policy change": "Policy of change in coverage policy pre2019",
-        "Health services targeted": "Health services targeted in change in coverage policy pre2019",
-        "People targeted": "People targeted in change in coverage policy pre2019",
-        "Coverage policy area (cat)": "",
-        "Health services targeted (cat)": "",
-        "People targeted (cat)": ""
-    }
-
-    target_headers = [2, 3, 4, 5]
-    table_data = get_charges_in_coverage_table_data(document, changes_in_coverage_2019_header, target_headers)
-
-    if table_data:
-        return table_data
-    else:
-        error('Cant find "Changes in coverage policy up to and including 2019" table.')
-        return None
-
-
 def extract_charges_in_coverage_since20_table(document: Document):
     changes_in_coverage_2020_header = {
         "Year": "",
-        "Month": "",
-        "Coverage policy area": "Area of change in coverage policy",
+        "Month": "Month of change in coverage policy",
+        "Area of change": "Area of change in coverage policy",
         "Policy change": "Policy of change in coverage policy",
-        "Health services targeted": "Health services targeted in change in coverage policy",
+        "Health care targeted": "Health services targeted in change in coverage policy",
         "People targeted": "People targeted in change in coverage policy",
-        "Was this a response to the COVID-19 pandemic?": "Was this a response to the COVID-19 pandemic?",
         "Coverage policy area (cat)": "",
-        "Health services targeted (cat)": "",
+        "Health care targeted (cat)": "",
         "People targeted (cat)": "",
-        "Was this a response to the COVID-19 pandemic? (cat)": ""
     }
 
-    target_headers = [2, 3, 4, 5, 6]
+    target_headers = [1, 2, 3, 4, 5]
     table_data = get_charges_in_coverage_table_data(document, changes_in_coverage_2020_header, target_headers)
 
     if table_data:
@@ -479,15 +475,18 @@ def main():
                         help='Print debug logs into a "log.json" file.')
     parser.add_argument('-c', '--coverage_max', type=int,
                         help='Number of coverage policy table entries per year, by default 10, must be positive.')
+    parser.add_argument('-i', '--internal', action='store_true',
+                        help='Include internal fields in the output file.')
     args = parser.parse_args()
 
     if not filepath_exists(args.docx_filename):
         parser.error(f'The source file: {args.docx_filename} doesn\'t exist')
 
-    global OUT_FILENAME, DEFAULT_TEMPLATE, DEBUG, LOG_FILE, COUNTRY, YEAR, INTERNAL, COVERAGE_TABLE_MAX
-    INTERNAL = 'Internal'
+    global OUT_FILENAME, DEFAULT_TEMPLATE, DEBUG, LOG_FILE, COUNTRY, YEAR, INTERNAL_TEXT, INCLUDE_INTERNAL, COVERAGE_TABLE_MAX, BOX_CHARS
+    INTERNAL_TEXT = 'Internal'
     DEFAULT_TEMPLATE = 'Qualitative_Data_UHCPW_Template.xlsx'
     DEBUG = args.debug
+    INCLUDE_INTERNAL = args.internal
 
     if DEBUG:
         LOG_FILE = "log.json"
@@ -513,14 +512,12 @@ def main():
     debug('longtext_tables_data:\n', dump_json_var(longtext_tables_data))
 
     tables_data = longtext_tables_data
-    user_charges_by_type_data = extract_user_charges_by_type_table(document)
-    debug('user_charges_by_type_data:\n', dump_json_var(user_charges_by_type_data))
-    if user_charges_by_type_data:
-        tables_data.append(user_charges_by_type_data)
+    user_charges_by_type_text_data = extract_user_charges_by_type_table(document)
+    debug('user_charges_by_type_data:\n', dump_json_var(user_charges_by_type_text_data))
+    if user_charges_by_type_text_data:
+        tables_data.append(user_charges_by_type_text_data)
 
     coverage_tables_data = {}
-    charges_in_coverage_upto19_data = extract_charges_in_coverage_upto19_table(document)
-    coverage_tables_data = add_to_coverage_tables_data(coverage_tables_data, charges_in_coverage_upto19_data)
 
     charges_in_coverage_since20_data = extract_charges_in_coverage_since20_table(document)
     coverage_tables_data = add_to_coverage_tables_data(coverage_tables_data, charges_in_coverage_since20_data)
@@ -538,6 +535,8 @@ def main():
 
     debug(f'sections ids:\n len: {len(ids.sections)}\n values:\n', dump_json_var(ids.sections))
     debug(f'data_elements ids:\n len: {len(ids.data_elements)}\n values:\n', dump_json_var(ids.data_elements))
+    debug(f'cat data_elements ids:\n len: {len(ids.cat_data_elements)}\n values:\n',
+          dump_json_var(ids.cat_data_elements))
     debug(f'countries ids:\n len: {len(ids.countries)}\n values:\n', dump_json_var(ids.countries))
     debug(f'combos ids:\n len: {len(ids.combos)}\n values:\n', dump_json_var(ids.combos))
 
