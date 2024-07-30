@@ -350,7 +350,7 @@ def get_user_charges_by_type_text(table: table, header_list: list, table_data: d
             if cell_id == 0:
                 type_of_heath_care = type_of_heath_care_dict.get(cleanup_string(cell.text), None)
                 if not type_of_heath_care:
-                    error(f'Unknown type of health care: {cell.text}')
+                    debug(f'Unknown type of health care: {cell.text}')
                     break
                 continue
 
@@ -375,15 +375,9 @@ def extract_user_charges_by_type_table(document: Document):
 
         if table_is_target(table, header_list):
             text_table_data = get_user_charges_by_type_text(table, header_list, text_table_data)
-                if row_id == 0:
 
     return text_table_data
-                    if cell_id == 0:
-                        type_of_heath_care = type_of_heath_care_dict.get(cleanup_string(cell.text), None)
-                        continue
-                    data_element = f'{header_list[cell_id]} {type_of_heath_care}'
-                    table_data[data_element] = cell.text.strip()
-            return table_data
+
 
 
 def add_to_coverage_tables_data(coverage_tables_data: dict, new_data: dict):
