@@ -802,11 +802,13 @@ def write_indicator(col_indicator: str, col_combo: str, last_cell: Cell, matched
     """
 
     count = 0
+    offset = 0
+    country_offset = 0
 
     for _, country_data in matched_values.items():
         years = list(country_data.keys())
         for year, indicators in country_data.items():
-            offset = years.index(year)
+            offset = years.index(year) + country_offset
             for indicator_id, indicator_combos in indicators.items():
                 if indicator_id == col_indicator:
                     for combo_id, value in indicator_combos.items():
@@ -816,6 +818,9 @@ def write_indicator(col_indicator: str, col_combo: str, last_cell: Cell, matched
                             new_cell.value = value
 
                             count += 1
+
+        # Offset for the next country
+        country_offset += years.index(year) + 1
 
     return count
 
