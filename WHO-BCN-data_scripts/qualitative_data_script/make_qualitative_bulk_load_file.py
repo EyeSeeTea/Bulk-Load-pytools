@@ -348,7 +348,7 @@ def get_charges_in_coverage_table_data(document: Document, header_dict: dict, ta
                             # NOTE: Limited to COVERAGE_TABLE_MAX items as its the limit of the data entry form
                             if year_count[year] >= COVERAGE_TABLE_MAX:
                                 error(
-                                    f"Ccharges in coverage table has too many entries for year {year} (max {COVERAGE_TABLE_MAX} entries for year)"
+                                    f"Charges in coverage table has too many entries for year {year} (max {COVERAGE_TABLE_MAX} entries for year)"
                                 )
                                 error(f"Discarded row:")
                                 error(f"{' | '.join([cleanup_string(cell.text) for cell in row.cells])}")
@@ -484,7 +484,7 @@ def get_coverage_max(parser: ArgumentParser, value: int):
         else:
             return value
     else:
-        return 10
+        return 20
 
 
 def main():
