@@ -92,57 +92,7 @@ COUNTRY_DICT = {
 }
 
 
-COMBO_LIST = [
-    'Total, Outpatient care',
-    'Poorest, Dental care',
-    'Medical products, Richest',
-    '2nd',
-    '3rd',
-    'Poorest, Outpatient care',
-    'Dental care, 4th',
-    'Diagnostic tests, 3rd',
-    'Diagnostic tests, Poorest',
-    'Medical products, 3rd',
-    'Medical products, Poorest',
-    '2nd, Outpatient care',
-    'Medicines, 3rd',
-    'Inpatient care',
-    'Outpatient care, 3rd',
-    'default',
-    'Medical products, Total',
-    'Dental care',
-    'Richest, Dental care',
-    'Richest, Outpatient care',
-    'Richest',
-    'Inpatient care, 4th',
-    'Dental care, 2nd',
-    'Diagnostic tests, Richest',
-    'Medicines, 4th',
-    '2nd, Medicines',
-    'Inpatient care, 3rd',
-    'Total, Medicines',
-    'Inpatient care, Total',
-    'Dental care, Total',
-    'Medical products, 2nd',
-    'Medical products',
-    'Poorest',
-    'Diagnostic tests, 4th',
-    'Outpatient care',
-    'Dental care, 3rd',
-    'Total',
-    'Richest, Inpatient care',
-    'Medicines',
-    'Medical products, 4th',
-    'Diagnostic tests',
-    'Diagnostic tests, 2nd',
-    'Inpatient care, 2nd',
-    '4th',
-    'Richest, Medicines',
-    'Poorest, Medicines',
-    'Diagnostic tests, Total',
-    'Poorest, Inpatient care',
-    'Outpatient care, 4th'
-]
+COMBO_LIST: list[str] = []
 
 
 OLD_NAMES_DICT = {
@@ -235,7 +185,6 @@ def get_new_name(indicator_name: str, service: str):
     """
 
     if indicator_name in OLD_NAMES_DICT:
-        debug(f'Found old name: {indicator_name}')
         new_name = OLD_NAMES_DICT[indicator_name]
         if isinstance(new_name, dict):
             if service not in new_name:
@@ -438,7 +387,7 @@ def get_metadata_ids(workbook: Workbook):
         ids (MetadataIds): named tuple containing dictionaries with the ids of indicators, countries and combos used
     """
 
-    global COC_DEFAULT_ID, COC_TOTAL_ID
+    global COC_DEFAULT_ID, COC_TOTAL_ID, COMBO_LIST
 
     indicators_id_dict = {}
     countries_id_dict = {}
@@ -452,6 +401,7 @@ def get_metadata_ids(workbook: Workbook):
 
         if type_col == 'categoryOptionCombos':
             combos_id_dict[identifier] = name
+            COMBO_LIST.append(name)
 
             if name == "default":
                 COC_DEFAULT_ID = identifier
@@ -1001,14 +951,13 @@ def main():
         traceback.print_exc()
         sys.exit(1)
 
-    csv_values_dict = extract_values_from_csv(args.indicators_csv)
-    debug('csv_values_dict:\n ', dump_json_var(csv_values_dict))
-
     ids = get_metadata_ids(wb)
-
     debug(f'indicators ids:\n len: {len(ids.indicators)}\n values:\n', dump_json_var(ids.indicators))
     debug(f'countries ids:\n len: {len(ids.countries)}\n values:\n', dump_json_var(ids.countries))
     debug(f'combos ids:\n len: {len(ids.combos)}\n values:\n', dump_json_var(ids.combos))
+
+    csv_values_dict = extract_values_from_csv(args.indicators_csv)
+    debug('csv_values_dict:\n ', dump_json_var(csv_values_dict))
 
     matched_values = make_matched_values(csv_values_dict, ids)
     make_transformations(matched_values)
@@ -1017,7 +966,6 @@ def main():
 
     debug(f'matched_values count: {csv_count}\n')
     debug('matched_values:\n', dump_json_var(matched_values))
-
 
     excel_count = write_values(wb, matched_values)
     debug(f'write_values count: {excel_count}\n')
