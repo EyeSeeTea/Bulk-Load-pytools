@@ -34,6 +34,8 @@ FURTHERIMPOV_CATA_NAME = 'Share of households with catastrophic health spending 
 IMPOV_CATA_NAME = 'Share of households with catastrophic health spending who are impoverished'
 GGHED_GGE_NAME = 'Public spending on health as a share of government spending'
 UN_EUSILC_DENTAL_QUINTILE_NAME = 'Self-reported unmet need for dental care due to cost, distance and waiting time (quintile)'
+OOP_CONSUPTION_SHARE_NAME = 'Out-of-pocket payments for health care as a share of household consumption (by consumption quintile)'
+ANUAL_OOP_PP_CONSUPTION_NAME = 'Annual out-of-pocket payments for health care per person (by consumption quintile)'
 
 COUNTRY_DICT = {
     'BIH': 'Bosnia and Herzegovina',
@@ -140,9 +142,9 @@ OLD_NAMES_DICT = {
     'Share of households without out-of-pocket payments (total)': SHARE_HH_NO_OOP_TOTAL_NAME,
     'Share of households with out-of-pocket payments (by quintile)': SHARE_HH_WITH_OOP_QUINTILE_NAME,
     'Share of households with out-of-pocket payments (total)': SHARE_HH_WITH_OOP_TOTAL_NAME,
-    'Mean annual per capita OOP (by quintile)': 'Annual out-of-pocket payments for health care per person (by consumption quintile)',
+    'Mean annual per capita OOP (by quintile)': ANUAL_OOP_PP_CONSUPTION_NAME,
     'Mean annual per capita OOP (total)': 'Annual out-of-pocket payments for health care per person (total)',
-    'Out-of-pocket payments for health care as a share of household consumption (by quintile)': 'Out-of-pocket payments for health care as a share of household consumption (by consumption quintile)',
+    'Out-of-pocket payments for health care as a share of household consumption (by quintile)': OOP_CONSUPTION_SHARE_NAME,
     'Share of total OOP by structure (total population)': 'Breakdown of out-of-pocket payments by type of health care (total)',
     'Share of OOP by structure (by quintile)': 'Breakdown of out-of-pocket payments by type of health care (by consumption quintile)',
 }
@@ -314,6 +316,31 @@ def create_dict_if_dont_exist(dictionary: dict, key: str):
 
     if key not in dictionary:
         dictionary[key] = {}
+
+
+def find_total_quintile_indicator(indicator_name: str):
+    total = ' (total)'
+    selected_indicators = [
+        OOP_CONSUPTION_SHARE_NAME,
+        SHARE_HH_WITH_OOP_QUINTILE_NAME,
+        ANUAL_OOP_PP_CONSUPTION_NAME,
+        'Annual spending on voluntary health insurance premiums among all households (by consumption quintile)',
+        'Annual spending on voluntary health insurance premiums as a share of household consumption by consumption quintile',
+        'Annual spending on voluntary health insurance premiums per person among households with spending on voluntary health insurance (by consumption quintile)',
+        'Out-of-pocket payments as a share of household consumption among households with spending on voluntary health insurance premiums (by consumption quintile)',
+        CATA_QUINTILE_NAME,
+        'Share of households with spending on voluntary health insurance premiums (by consumption quintile)',
+        SHARE_HH_NO_OOP_QUINTILE_NAME,
+    ]
+
+    if indicator_name.endswith(total):
+        indicator_base = indicator_name.replace(total, '')
+
+        for indicator in selected_indicators:
+            if indicator_base in indicator:
+                return indicator
+    else:
+        return None
 
 
 def extract_values_from_csv(filename: str):
