@@ -222,6 +222,9 @@ def make_combo_string(quintile: str, service: str):
             result = combo
         elif combo_alt in COMBO_LIST:
             result = combo_alt
+        else:
+            print(f'ERROR: Can\'t find combo "{combo}" or "{combo_alt}" in metadata')
+            result = None
 
     return result
 
@@ -318,6 +321,13 @@ def create_dict_if_dont_exist(dictionary: dict, key: str):
         dictionary[key] = {}
 
 
+def insert_value_if_valid(values: dict, row: dict, value: str, indicator_name: str, year: str, country_name: str, cat_opt_combo: str):
+    if value != 'NA' and value is not None:
+        values[country_name][year][indicator_name][cat_opt_combo] = value
+    else:
+        debug(f'Empty CSV value in row: {row}')
+
+
 def find_total_quintile_indicator(indicator_name: str):
     total = ' (total)'
     selected_indicators = [
@@ -391,11 +401,16 @@ def extract_values_from_csv(filename: str):
                 service = 'NA' if indicator_name in INDICATOR_IGNORING_SERVICE else service
                 quintile = 'NA' if indicator_name in INDICATOR_IGNORING_QUINTILE else quintile
 
+                total_quintile_indicator = find_total_quintile_indicator(indicator_name)
+                if total_quintile_indicator:
+                    create_dict_if_dont_exist(values[country_name][year], total_quintile_indicator)
+                    insert_value_if_valid(values, row, value, total_quintile_indicator, year, country_name, 'Total')
+                    debug(f'Set value of "{indicator_name}" to "{total_quintile_indicator}" - Total')
+
                 cat_opt_combo = make_combo_string(quintile, service)
-                if value != 'NA' and value is not None:
-                    values[country_name][year][indicator_name][cat_opt_combo] = value
-                else:
-                    debug('Empty CSV value in row: ', row)
+                if not cat_opt_combo:
+                    continue
+                insert_value_if_valid(values, row, value, indicator_name, year, country_name, cat_opt_combo)
 
         return values
     except Exception:
