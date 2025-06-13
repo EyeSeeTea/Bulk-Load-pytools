@@ -34,6 +34,8 @@ FURTHERIMPOV_CATA_NAME = 'Share of households with catastrophic health spending 
 IMPOV_CATA_NAME = 'Share of households with catastrophic health spending who are impoverished'
 GGHED_GGE_NAME = 'Public spending on health as a share of government spending'
 UN_EUSILC_DENTAL_QUINTILE_NAME = 'Self-reported unmet need for dental care due to cost, distance and waiting time (quintile)'
+OOP_CONSUPTION_SHARE_NAME = 'Out-of-pocket payments for health care as a share of household consumption (by consumption quintile)'
+ANUAL_OOP_PP_CONSUPTION_NAME = 'Annual out-of-pocket payments for health care per person (by consumption quintile)'
 
 COUNTRY_DICT = {
     'BIH': 'Bosnia and Herzegovina',
@@ -92,57 +94,7 @@ COUNTRY_DICT = {
 }
 
 
-COMBO_LIST = [
-    'Total, Outpatient care',
-    'Poorest, Dental care',
-    'Medical products, Richest',
-    '2nd',
-    '3rd',
-    'Poorest, Outpatient care',
-    'Dental care, 4th',
-    'Diagnostic tests, 3rd',
-    'Diagnostic tests, Poorest',
-    'Medical products, 3rd',
-    'Medical products, Poorest',
-    '2nd, Outpatient care',
-    'Medicines, 3rd',
-    'Inpatient care',
-    'Outpatient care, 3rd',
-    'default',
-    'Medical products, Total',
-    'Dental care',
-    'Richest, Dental care',
-    'Richest, Outpatient care',
-    'Richest',
-    'Inpatient care, 4th',
-    'Dental care, 2nd',
-    'Diagnostic tests, Richest',
-    'Medicines, 4th',
-    '2nd, Medicines',
-    'Inpatient care, 3rd',
-    'Total, Medicines',
-    'Inpatient care, Total',
-    'Dental care, Total',
-    'Medical products, 2nd',
-    'Medical products',
-    'Poorest',
-    'Diagnostic tests, 4th',
-    'Outpatient care',
-    'Dental care, 3rd',
-    'Total',
-    'Richest, Inpatient care',
-    'Medicines',
-    'Medical products, 4th',
-    'Diagnostic tests',
-    'Diagnostic tests, 2nd',
-    'Inpatient care, 2nd',
-    '4th',
-    'Richest, Medicines',
-    'Poorest, Medicines',
-    'Diagnostic tests, Total',
-    'Poorest, Inpatient care',
-    'Outpatient care, 4th'
-]
+COMBO_LIST: list[str] = []
 
 
 OLD_NAMES_DICT = {
@@ -190,9 +142,9 @@ OLD_NAMES_DICT = {
     'Share of households without out-of-pocket payments (total)': SHARE_HH_NO_OOP_TOTAL_NAME,
     'Share of households with out-of-pocket payments (by quintile)': SHARE_HH_WITH_OOP_QUINTILE_NAME,
     'Share of households with out-of-pocket payments (total)': SHARE_HH_WITH_OOP_TOTAL_NAME,
-    'Mean annual per capita OOP (by quintile)': 'Annual out-of-pocket payments for health care per person (by consumption quintile)',
+    'Mean annual per capita OOP (by quintile)': ANUAL_OOP_PP_CONSUPTION_NAME,
     'Mean annual per capita OOP (total)': 'Annual out-of-pocket payments for health care per person (total)',
-    'Out-of-pocket payments for health care as a share of household consumption (by quintile)': 'Out-of-pocket payments for health care as a share of household consumption (by consumption quintile)',
+    'Out-of-pocket payments for health care as a share of household consumption (by quintile)': OOP_CONSUPTION_SHARE_NAME,
     'Share of total OOP by structure (total population)': 'Breakdown of out-of-pocket payments by type of health care (total)',
     'Share of OOP by structure (by quintile)': 'Breakdown of out-of-pocket payments by type of health care (by consumption quintile)',
 }
@@ -235,7 +187,6 @@ def get_new_name(indicator_name: str, service: str):
     """
 
     if indicator_name in OLD_NAMES_DICT:
-        debug(f'Found old name: {indicator_name}')
         new_name = OLD_NAMES_DICT[indicator_name]
         if isinstance(new_name, dict):
             if service not in new_name:
@@ -271,6 +222,9 @@ def make_combo_string(quintile: str, service: str):
             result = combo
         elif combo_alt in COMBO_LIST:
             result = combo_alt
+        else:
+            print(f'ERROR: Can\'t find combo "{combo}" or "{combo_alt}" in metadata')
+            result = None
 
     return result
 
@@ -367,6 +321,38 @@ def create_dict_if_dont_exist(dictionary: dict, key: str):
         dictionary[key] = {}
 
 
+def insert_value_if_valid(values: dict, row: dict, value: str, indicator_name: str, year: str, country_name: str, cat_opt_combo: str):
+    if value != 'NA' and value is not None:
+        values[country_name][year][indicator_name][cat_opt_combo] = value
+    else:
+        debug(f'Empty CSV value in row: {row}')
+
+
+def find_total_quintile_indicator(indicator_name: str):
+    total = ' (total)'
+    selected_indicators = [
+        OOP_CONSUPTION_SHARE_NAME,
+        SHARE_HH_WITH_OOP_QUINTILE_NAME,
+        ANUAL_OOP_PP_CONSUPTION_NAME,
+        'Annual spending on voluntary health insurance premiums among all households (by consumption quintile)',
+        'Annual spending on voluntary health insurance premiums as a share of household consumption by consumption quintile',
+        'Annual spending on voluntary health insurance premiums per person among households with spending on voluntary health insurance (by consumption quintile)',
+        'Out-of-pocket payments as a share of household consumption among households with spending on voluntary health insurance premiums (by consumption quintile)',
+        CATA_QUINTILE_NAME,
+        'Share of households with spending on voluntary health insurance premiums (by consumption quintile)',
+        SHARE_HH_NO_OOP_QUINTILE_NAME,
+    ]
+
+    if indicator_name.endswith(total):
+        indicator_base = indicator_name.replace(total, '')
+
+        for indicator in selected_indicators:
+            if indicator_base in indicator:
+                return indicator
+    else:
+        return None
+
+
 def extract_values_from_csv(filename: str):
     """Given a CSV file name creates a dictionary of the CSV file data
 
@@ -415,11 +401,16 @@ def extract_values_from_csv(filename: str):
                 service = 'NA' if indicator_name in INDICATOR_IGNORING_SERVICE else service
                 quintile = 'NA' if indicator_name in INDICATOR_IGNORING_QUINTILE else quintile
 
+                total_quintile_indicator = find_total_quintile_indicator(indicator_name)
+                if total_quintile_indicator:
+                    create_dict_if_dont_exist(values[country_name][year], total_quintile_indicator)
+                    insert_value_if_valid(values, row, value, total_quintile_indicator, year, country_name, 'Total')
+                    debug(f'Set value of "{indicator_name}" to "{total_quintile_indicator}" - Total')
+
                 cat_opt_combo = make_combo_string(quintile, service)
-                if value != 'NA' and value is not None:
-                    values[country_name][year][indicator_name][cat_opt_combo] = value
-                else:
-                    debug('Empty CSV value in row: ', row)
+                if not cat_opt_combo:
+                    continue
+                insert_value_if_valid(values, row, value, indicator_name, year, country_name, cat_opt_combo)
 
         return values
     except Exception:
@@ -438,7 +429,7 @@ def get_metadata_ids(workbook: Workbook):
         ids (MetadataIds): named tuple containing dictionaries with the ids of indicators, countries and combos used
     """
 
-    global COC_DEFAULT_ID, COC_TOTAL_ID
+    global COC_DEFAULT_ID, COC_TOTAL_ID, COMBO_LIST
 
     indicators_id_dict = {}
     countries_id_dict = {}
@@ -452,6 +443,7 @@ def get_metadata_ids(workbook: Workbook):
 
         if type_col == 'categoryOptionCombos':
             combos_id_dict[identifier] = name
+            COMBO_LIST.append(name)
 
             if name == "default":
                 COC_DEFAULT_ID = identifier
@@ -1001,14 +993,13 @@ def main():
         traceback.print_exc()
         sys.exit(1)
 
-    csv_values_dict = extract_values_from_csv(args.indicators_csv)
-    debug('csv_values_dict:\n ', dump_json_var(csv_values_dict))
-
     ids = get_metadata_ids(wb)
-
     debug(f'indicators ids:\n len: {len(ids.indicators)}\n values:\n', dump_json_var(ids.indicators))
     debug(f'countries ids:\n len: {len(ids.countries)}\n values:\n', dump_json_var(ids.countries))
     debug(f'combos ids:\n len: {len(ids.combos)}\n values:\n', dump_json_var(ids.combos))
+
+    csv_values_dict = extract_values_from_csv(args.indicators_csv)
+    debug('csv_values_dict:\n ', dump_json_var(csv_values_dict))
 
     matched_values = make_matched_values(csv_values_dict, ids)
     make_transformations(matched_values)
@@ -1017,7 +1008,6 @@ def main():
 
     debug(f'matched_values count: {csv_count}\n')
     debug('matched_values:\n', dump_json_var(matched_values))
-
 
     excel_count = write_values(wb, matched_values)
     debug(f'write_values count: {excel_count}\n')
