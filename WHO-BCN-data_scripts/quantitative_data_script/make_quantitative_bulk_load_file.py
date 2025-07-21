@@ -223,7 +223,7 @@ def make_combo_string(quintile: str, service: str):
         elif combo_alt in COMBO_LIST:
             result = combo_alt
         else:
-            print(f'ERROR: Can\'t find combo "{combo}" or "{combo_alt}" in metadata')
+            print(f'ERROR: Can\'t find combo "{combo}" or "{combo_alt}" in metadata', file=sys.stderr)
             result = None
 
     return result
@@ -473,7 +473,7 @@ def get_indicator_id(ids: MetadataIds, name: str):
     try:
         return ids.indicators[name]
     except KeyError:
-        print(f'ERROR: Data element "{name}" can\'t be matched with an ID, check metadata')
+        print(f'ERROR: Data element "{name}" can\'t be matched with an ID, check metadata', file=sys.stderr)
         print(f'Closest candidates: {difflib.get_close_matches(name, ids.indicators.keys())}')
         return None
 
@@ -666,7 +666,10 @@ def get_indicator_value(matched_values: dict, country_id: str, year: str, indica
         if default:
             return default
 
-        print(f'ERROR: Can\'t find value for country: {country_id} year: {year} de: {indicator_id} combo: {combo_id}')
+        print(
+            f'ERROR: Can\'t find value for country: {country_id} year: {year} de: {indicator_id} combo: {combo_id}',
+            file=sys.stderr
+        )
         return None
 
 
