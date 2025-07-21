@@ -238,6 +238,31 @@ def check_for_empty_csv_fields(**elements):
             print(f'WARNING: Empty {name} variable in CSV file in row:\n{elements["row"]}')
 
 
+def is_valid_coefficient(coefficient: float):
+    """Checks if the coefficient is valid (not zero or NaN)
+
+    Args:
+        coefficient (float): The coefficient to check
+
+    Returns:
+        _type_: True if valid, False otherwise
+    """
+    return isinstance(coefficient, (int, float, complex)) and coefficient != 0.0 and not pd.isna(coefficient)
+
+
+def get_coefficient(country: str, year: str):
+    """Gets the currency conversion coefficient for a specific country and year
+
+    Args:
+        country (str): The country code
+        year (str): The year
+
+    Returns:
+        _type_: The currency conversion coefficient
+    """
+    return float(CURRENCY_TABLE[(CURRENCY_TABLE['code'] == country)][year].values[0])
+
+
 def currency_converter(amount: str, country: str, year: str, figure: str):
     """Applies currency conversion to the CSV file values
 
@@ -271,16 +296,29 @@ def currency_converter(amount: str, country: str, year: str, figure: str):
     elif country == "NLD":
         country = "NET"
 
+    if CURRENCY_TABLE is None:
+        print('ERROR: CURRENCY_TABLE is not defined or empty', file=sys.stderr)
+        sys.exit(1)
+
+    coefficient: float = 0.0
     try:
-        coefficient = CURRENCY_TABLE[
-            (CURRENCY_TABLE['code'] == country)
-        ][year].values[0]
-    except KeyError:
+        coefficient = get_coefficient(country, year)
+        if not is_valid_coefficient(coefficient):
+            raise ValueError(
+                f'WARNING: currency_converter coefficient is {type(coefficient).__name__}, is empty or 0 for {country} in {year}'
+            )
+    except (KeyError, ValueError) as e:
+        debug(e)
         # If no coefficient available for year, get the closest year to present
-        last_year = next(reversed(CURRENCY_TABLE.keys()))
-        coefficient = CURRENCY_TABLE[
-            (CURRENCY_TABLE['code'] == country)
-        ][last_year].values[0]
+        years = reversed([key for key in CURRENCY_TABLE.keys() if key not in ('code', 'Country')])
+        for year in years:
+            coefficient = get_coefficient(country, year)
+            if is_valid_coefficient(coefficient):
+                debug(f'currency_converter coefficient found for {country} in {year}: {coefficient}')
+                break
+        else:
+            print(f'ERROR: No valid currency conversion coefficient found for {country}', file=sys.stderr)
+            sys.exit(1)
     except Exception:
         traceback.print_exc()
         sys.exit(1)
