@@ -38,7 +38,9 @@ OOP_CONSUPTION_SHARE_NAME = 'Out-of-pocket payments for health care as a share o
 ANUAL_OOP_PP_CONSUPTION_NAME = 'Annual out-of-pocket payments for health care per person (by consumption quintile)'
 
 COUNTRY_DICT = {
-    'BIH': 'Bosnia and Herzegovina',
+    'BIH': 'Brcko District',
+    'BIHF': 'Federacija Bosne i Hercegovine',
+    'BIHR': 'Republica Serpska',
     'CZH': 'Czech Republic',
     'DEU': 'Federal Republic of Germany',
     'FRA': 'French Republic',
@@ -71,6 +73,7 @@ COUNTRY_DICT = {
     'ICE': 'Republic of Iceland',
     'ITA': 'Republic of Italy',
     'KAZ': 'Republic of Kazakhstan',
+    'KOS': 'Kosovo',
     'LVA': 'Republic of Latvia',
     'LTU': 'Republic of Lithuania',
     'MAT': 'Republic of Malta',
