@@ -158,6 +158,16 @@ OLD_NAMES_DICT = {
     'Share of OOP by structure (by quintile)': 'Breakdown of out-of-pocket payments by type of health care (by consumption quintile)',
 }
 
+CODE_DICT = {
+    'un_eusilc_healthcare_65years': 'Self-reported unmet need for health care due to cost, distance and waiting time (65+ years)',
+    'un_eusilc_healthcare_65years': 'Self-reported unmet need for health care due to cost, distance and waiting time (65+ years)',
+    'un_eusilc_healthcare_25years': 'Self-reported unmet need for health care due to cost, distance and waiting time (<25 years)',
+    'un_eusilc_dental_65years': 'Self-reported unmet need for dental care due to cost, distance and waiting time (65+ years)',
+    'un_eusilc_dental_25years': 'Self-reported unmet need for dental care due to cost, distance and waiting time (<25 years)',
+    'un_ehis_prescribed_medicines_65years': 'Self-reported unmet need for prescribed medicines due to cost (65+ years)',
+    'un_ehis_prescribed_medicines_25years': 'Self-reported unmet need for prescribed medicines due to cost (<25 years)',
+}
+
 
 INDICATOR_IGNORING_SERVICE = [
     'Annual out-of-pocket payments for outpatient medicines per person by consumption quintile',
@@ -181,12 +191,13 @@ COC_DEFAULT_ID = ""
 COC_TOTAL_ID = ""
 
 
-def get_new_name(indicator_name: str, service: str):
+def get_new_name(indicator_name: str, service: str, indicator_code: str):
     """Maps old data elements names to new ones
 
     Args:
         indicator_name (str): Old data element name
         service (str): data element categoryOptionCombos name
+        indicator_id (str): Indicator ID
 
     Raises:
         ValueError: If a DE can't be mapped 
@@ -194,6 +205,9 @@ def get_new_name(indicator_name: str, service: str):
     Returns:
         new_indicator_name (str): New data element name
     """
+
+    if indicator_code in CODE_DICT:
+        return CODE_DICT[indicator_code]
 
     if indicator_name in OLD_NAMES_DICT:
         new_name = OLD_NAMES_DICT[indicator_name]
@@ -417,6 +431,7 @@ def extract_values_from_csv(filename: str):
             reader = csv.DictReader(f)
             for row in reader:
                 indicator_name = row['indicator_name']
+                indicator_code = row['indicator_id']
                 country = row['country']
                 year = row['year']
                 quintile = row['quintile']
@@ -437,7 +452,7 @@ def extract_values_from_csv(filename: str):
                     value=value
                 )
 
-                indicator_name = get_new_name(indicator_name, service)
+                indicator_name = get_new_name(indicator_name, service, indicator_code)
 
                 country_name = COUNTRY_DICT[country]
 
