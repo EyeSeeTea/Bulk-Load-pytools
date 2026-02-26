@@ -166,6 +166,8 @@ CODE_DICT = {
     'un_eusilc_dental_25years': 'Self-reported unmet need for dental care due to cost, distance and waiting time (<25 years)',
     'un_ehis_prescribed_medicines_65years': 'Self-reported unmet need for prescribed medicines due to cost (65+ years)',
     'un_ehis_prescribed_medicines_25years': 'Self-reported unmet need for prescribed medicines due to cost (<25 years)',
+    'un_ehis_social_care_personal_care': 'Self-reported unmet need for social care (personal care)',
+    'un_ehis_social_care_household_activities': 'Self-reported unmet need for social care (household activities)'
 }
 
 
