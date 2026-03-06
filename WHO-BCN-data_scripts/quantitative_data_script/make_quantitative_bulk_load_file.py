@@ -100,6 +100,7 @@ COUNTRY_DICT = {
     'UKR': 'Ukraine',
     'UNK': 'United Kingdom of Great Britain and Northern Ireland',
     'EU27': 'European Union (EU)',
+    'EU': 'European Union (EU)',
 }
 
 
@@ -167,7 +168,10 @@ CODE_DICT = {
     'un_ehis_prescribed_medicines_65years': 'Self-reported unmet need for prescribed medicines due to cost (65+ years)',
     'un_ehis_prescribed_medicines_25years': 'Self-reported unmet need for prescribed medicines due to cost (<25 years)',
     'un_ehis_social_care_personal_care': 'Self-reported unmet need for social care (personal care)',
-    'un_ehis_social_care_household_activities': 'Self-reported unmet need for social care (household activities)'
+    'un_ehis_social_care_household_activities': 'Self-reported unmet need for social care (household activities)',
+    'sha_inpatient_ltc': 'Public spending on long-term care (health) per person in people aged 65+ (Inpatient)',
+    'sha_homebased_ltc': 'Public spending on long-term care (health) per person in people aged 65+ (Home-based)',
+    'pop_share_65': 'Population aged 65 (share)',
 }
 
 
