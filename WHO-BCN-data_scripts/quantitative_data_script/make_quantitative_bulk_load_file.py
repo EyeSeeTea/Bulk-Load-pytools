@@ -172,6 +172,16 @@ CODE_DICT = {
     'sha_inpatient_ltc': 'Public spending on long-term care (health) per person in people aged 65+ (Inpatient)',
     'sha_homebased_ltc': 'Public spending on long-term care (health) per person in people aged 65+ (Home-based)',
     'pop_share_65': 'Population aged 65 (share)',
+    'cata_total': CATA_TOTAL_NAME,
+    "cata_agehhh_65": 'Catastrophic incidence by household age composition (65+)',
+    "cata_age_comp_onlyolder": 'Catastrophic incidence by household age composition (only older)',
+    "share_cata_agehhh_65": 'Share of catastrophic incidence by household age composition (65+)',
+    "share_cata_agehhh_64": 'Share of catastrophic incidence by household age composition (<65)',
+    "share_cata_age_comp_adultsonly": 'Share of catastrophic incidence by household age composition (adults only)',
+    "share_cata_age_comp_multigenerational": 'Share of catastrophic incidence by household age composition (multigenerational)',
+    "share_cata_age_comp_older": 'Share of catastrophic incidence by household age composition (older)',
+    "share_cata_age_comp_onlyolder": 'Share of catastrophic incidence by household age composition (only older)',
+    "share_cata_age_comp_young": 'Share of catastrophic incidence by household age composition (younger)',
 }
 
 
